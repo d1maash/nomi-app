@@ -8,6 +8,7 @@ import { biometricService } from '@/services/biometric';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { darkTheme } from '@/styles/theme';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SupabaseProvider } from '@/components/supabase-provider';
 
 // Предотвращаем автоматическое скрытие splash screen
 SplashScreen.preventAutoHideAsync();
@@ -96,7 +97,9 @@ export default function RootLayout() {
           publishableKey={CLERK_CONFIG.publishableKey}
           tokenCache={clerkTokenCache}
         >
-          <AppStack />
+          <SupabaseProvider>
+            <AppStack />
+          </SupabaseProvider>
         </ClerkProvider>
       ) : (
         <AppStack />
