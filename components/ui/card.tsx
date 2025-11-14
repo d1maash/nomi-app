@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     ...darkTheme.shadows.md,
   },
   tinted: {
-    backgroundColor: `${darkTheme.colors.primary}14`,
-    borderColor: `${darkTheme.colors.primary}40`,
+    backgroundColor: darkTheme.colors.surfaceLight,
+    borderColor: darkTheme.colors.border,
   },
 });

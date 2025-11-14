@@ -5,8 +5,9 @@ import { useStore } from '@/store';
 import { darkTheme } from '@/styles/theme';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { CATEGORY_ICONS, CATEGORY_LABELS } from '@/constants/categories';
+import { CATEGORY_COLORS, CATEGORY_ICONS, CATEGORY_LABELS } from '@/constants/categories';
 import { triggerHaptic } from '@/utils/haptics';
+import { MonoIcon } from '@/components/ui/mono-icon';
 
 export default function TransactionDetailScreen() {
   const router = useRouter();
@@ -42,10 +43,18 @@ export default function TransactionDetailScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.icon}>{CATEGORY_ICONS[transaction.category]}</Text>
-        <Text style={styles.category}>
-          {CATEGORY_LABELS[transaction.category]}
-        </Text>
+        <View
+          style={[
+            styles.iconBadge,
+            {
+              backgroundColor: `${CATEGORY_COLORS[transaction.category]}22`,
+              borderColor: `${CATEGORY_COLORS[transaction.category]}55`,
+            },
+          ]}
+        >
+          <MonoIcon name={CATEGORY_ICONS[transaction.category]} size={32} />
+        </View>
+        <Text style={styles.category}>{CATEGORY_LABELS[transaction.category]}</Text>
       </View>
 
       <Text style={styles.amount}>
@@ -64,9 +73,8 @@ export default function TransactionDetailScreen() {
 
       {transaction.aiSuggested && (
         <View style={styles.aiBadge}>
-          <Text style={styles.aiBadgeText}>
-            🤖 Категория предложена AI
-          </Text>
+          <MonoIcon name="cpu" size={14} color={darkTheme.colors.text} />
+          <Text style={styles.aiBadgeText}>Категория предложена AI</Text>
         </View>
       )}
 
@@ -92,8 +100,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: darkTheme.spacing.xl,
   },
-  icon: {
-    fontSize: 64,
+  iconBadge: {
+    width: 96,
+    height: 96,
+    borderRadius: darkTheme.borderRadius.full,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: darkTheme.spacing.md,
   },
   category: {
@@ -126,10 +139,14 @@ const styles = StyleSheet.create({
     color: darkTheme.colors.text,
   },
   aiBadge: {
-    backgroundColor: `${darkTheme.colors.primary}15`,
+    backgroundColor: `${darkTheme.colors.primary}10`,
     padding: darkTheme.spacing.md,
     borderRadius: darkTheme.borderRadius.md,
     marginTop: darkTheme.spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: darkTheme.spacing.xs,
   },
   aiBadgeText: {
     ...darkTheme.typography.bodySmall,

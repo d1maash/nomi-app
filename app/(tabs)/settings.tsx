@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { biometricService } from '@/services/biometric';
 import { triggerHaptic } from '@/utils/haptics';
 import { useAuth } from '@clerk/clerk-expo';
+import { MonoIcon } from '@/components/ui/mono-icon';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -132,7 +133,10 @@ export default function SettingsScreen() {
           <Card style={styles.settingCard}>
             <View style={styles.setting}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>🔒 {biometricType}</Text>
+                <View style={styles.settingTitleRow}>
+                  <MonoIcon name="shield" size={16} color={darkTheme.colors.text} />
+                  <Text style={styles.settingLabel}>{biometricType}</Text>
+                </View>
                 <Text style={styles.settingDesc}>
                   Защита входа в приложение
                 </Text>
@@ -157,7 +161,10 @@ export default function SettingsScreen() {
         <Card style={styles.settingCard}>
           <View style={styles.setting}>
             <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Включить уведомления</Text>
+              <View style={styles.settingTitleRow}>
+                <MonoIcon name="bell" size={16} color={darkTheme.colors.text} />
+                <Text style={styles.settingLabel}>Включить уведомления</Text>
+              </View>
             </View>
             <Switch
               value={settings.notifications.enabled}
@@ -176,7 +183,10 @@ export default function SettingsScreen() {
             <Card style={styles.settingCard}>
               <View style={styles.setting}>
                 <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Ежемесячный бюджет</Text>
+                  <View style={styles.settingTitleRow}>
+                    <MonoIcon name="calendar" size={16} color={darkTheme.colors.text} />
+                    <Text style={styles.settingLabel}>Ежемесячный бюджет</Text>
+                  </View>
                   <Text style={styles.settingDesc}>
                     Уведомление в начале месяца
                   </Text>
@@ -196,7 +206,10 @@ export default function SettingsScreen() {
             <Card style={styles.settingCard}>
               <View style={styles.setting}>
                 <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Прогресс по целям</Text>
+                  <View style={styles.settingTitleRow}>
+                    <MonoIcon name="target" size={16} color={darkTheme.colors.text} />
+                    <Text style={styles.settingLabel}>Прогресс по целям</Text>
+                  </View>
                 </View>
                 <Switch
                   value={settings.notifications.goalProgress}
@@ -213,7 +226,10 @@ export default function SettingsScreen() {
             <Card style={styles.settingCard}>
               <View style={styles.setting}>
                 <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Челленджи и инсайты</Text>
+                  <View style={styles.settingTitleRow}>
+                    <MonoIcon name="award" size={16} color={darkTheme.colors.text} />
+                    <Text style={styles.settingLabel}>Челленджи и инсайты</Text>
+                  </View>
                 </View>
                 <Switch
                   value={settings.notifications.challenges && settings.notifications.insights}
@@ -240,7 +256,10 @@ export default function SettingsScreen() {
         <Card style={styles.settingCard}>
           <View style={styles.setting}>
             <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Автокатегоризация</Text>
+              <View style={styles.settingTitleRow}>
+                <MonoIcon name="tag" size={16} color={darkTheme.colors.text} />
+                <Text style={styles.settingLabel}>Автокатегоризация</Text>
+              </View>
               <Text style={styles.settingDesc}>
                 AI определяет категорию транзакций
               </Text>
@@ -260,7 +279,10 @@ export default function SettingsScreen() {
         <Card style={styles.settingCard}>
           <View style={styles.setting}>
             <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Прогнозы и коучинг</Text>
+              <View style={styles.settingTitleRow}>
+                <MonoIcon name="trending-up" size={16} color={darkTheme.colors.text} />
+                <Text style={styles.settingLabel}>Прогнозы и коучинг</Text>
+              </View>
               <Text style={styles.settingDesc}>
                 AI-анализ и рекомендации
               </Text>
@@ -328,6 +350,11 @@ const styles = StyleSheet.create({
   settingInfo: {
     flex: 1,
     marginRight: darkTheme.spacing.md,
+  },
+  settingTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTheme.spacing.xs,
   },
   settingLabel: {
     ...darkTheme.typography.body,

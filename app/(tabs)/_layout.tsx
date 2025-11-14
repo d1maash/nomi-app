@@ -1,8 +1,9 @@
-import { Text } from 'react-native';
 import { Tabs, Redirect } from 'expo-router';
 import { useUser, useAuth } from '@clerk/clerk-expo';
 import { useStore } from '@/store';
 import { darkTheme } from '@/styles/theme';
+import { MonoIcon } from '@/components/ui/mono-icon';
+import type { MonoIconName } from '@/types/icon';
 
 export default function TabsLayout() {
   const user = useUser();
@@ -107,23 +108,20 @@ export default function TabsLayout() {
 
 // Простые иконки на основе emoji
 function TabIcon({ name, color }: { name: string; color: string }) {
-  const icons: Record<string, string> = {
-    home: '🏠',
-    list: '📋',
-    chart: '📊',
-    bulb: '💡',
-    settings: '⚙️',
+  const icons: Record<string, MonoIconName> = {
+    home: 'home',
+    list: 'list',
+    chart: 'bar-chart-2',
+    bulb: 'sun',
+    settings: 'sliders',
   };
 
   return (
-    <Text
-      style={{
-        fontSize: 24,
-        color,
-        opacity: color === darkTheme.colors.textSecondary ? 0.6 : 1,
-      }}
-    >
-      {icons[name] || '•'}
-    </Text>
+    <MonoIcon
+      name={icons[name] ?? 'circle'}
+      color={color}
+      size={22}
+      style={{ opacity: color === darkTheme.colors.textSecondary ? 0.6 : 1 }}
+    />
   );
 }

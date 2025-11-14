@@ -83,7 +83,7 @@ class CoachingEngine {
         insights.push({
           id: `comparison-${Date.now()}`,
           type: 'coaching',
-          title: 'Отличная экономия! 🎉',
+          title: 'Отличная экономия',
           message: `В этом месяце ты потратил на ${Math.abs(Math.round(difference))}% меньше, чем в прошлом.`,
           actionable: `Ты сэкономил ${Math.round(lastMonthTotal - thisMonthTotal)} ₸. Продолжай в том же духе!`,
           priority: 'low',

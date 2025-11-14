@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Transaction } from '@/types';
 import { darkTheme } from '@/styles/theme';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { CATEGORY_ICONS, CATEGORY_LABELS } from '@/constants/categories';
+import { CATEGORY_COLORS, CATEGORY_ICONS, CATEGORY_LABELS } from '@/constants/categories';
+import { MonoIcon } from '@/components/ui/mono-icon';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -23,7 +24,17 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
       activeOpacity={0.7}
     >
       <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{CATEGORY_ICONS[transaction.category]}</Text>
+        <View
+          style={[
+            styles.iconBadge,
+            {
+              backgroundColor: `${CATEGORY_COLORS[transaction.category]}22`,
+              borderColor: `${CATEGORY_COLORS[transaction.category]}55`,
+            },
+          ]}
+        >
+          <MonoIcon name={CATEGORY_ICONS[transaction.category]} size={20} />
+        </View>
       </View>
       
       <View style={styles.content}>
@@ -63,13 +74,17 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: darkTheme.borderRadius.lg,
-    backgroundColor: darkTheme.colors.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: darkTheme.spacing.md,
   },
-  icon: {
-    fontSize: 24,
+  iconBadge: {
+    width: '100%',
+    height: '100%',
+    borderRadius: darkTheme.borderRadius.lg,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     flex: 1,

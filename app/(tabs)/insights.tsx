@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { aiService } from '@/services/ai';
 import { triggerHaptic } from '@/utils/haptics';
 import { AIInsight, Challenge } from '@/types';
+import { MonoIcon } from '@/components/ui/mono-icon';
 
 export default function InsightsScreen() {
   const [refreshing, setRefreshing] = useState(false);
@@ -65,7 +66,7 @@ export default function InsightsScreen() {
   if (transactions.length === 0) {
     return (
       <EmptyState
-        icon="💡"
+        iconName="clipboard"
         title="Недостаточно данных"
         message="Добавь несколько транзакций, чтобы получить AI-инсайты и рекомендации"
       />
@@ -85,15 +86,21 @@ export default function InsightsScreen() {
       {/* Предложенный челлендж */}
       {suggestedChallenge && (
         <Card style={[styles.card, styles.challengeCard]}>
-          <Text style={styles.cardTitle}>⚡ Новый челлендж для тебя</Text>
+          <View style={styles.cardTitleRow}>
+            <MonoIcon name='activity' size={18} color={darkTheme.colors.text} />
+            <Text style={styles.cardTitle}>Новый челлендж для тебя</Text>
+          </View>
           <Text style={styles.challengeTitle}>{suggestedChallenge.title}</Text>
           <Text style={styles.challengeDesc}>{suggestedChallenge.description}</Text>
           <View style={styles.challengeMeta}>
             <Badge text={`${suggestedChallenge.duration} дней`} variant="warning" />
             {suggestedChallenge.badge && (
-              <Text style={styles.challengeBadge}>
-                Награда: {suggestedChallenge.badge.icon} {suggestedChallenge.badge.name}
-              </Text>
+              <View style={styles.challengeBadgeRow}>
+                <MonoIcon name={suggestedChallenge.badge.icon} size={16} color={darkTheme.colors.textSecondary} />
+                <Text style={styles.challengeBadge}>
+                  Награда: {suggestedChallenge.badge.name}
+                </Text>
+              </View>
             )}
           </View>
           <Button
@@ -156,7 +163,10 @@ export default function InsightsScreen() {
               </View>
               <Text style={styles.insightMessage}>{insight.message}</Text>
               <View style={styles.actionableContainer}>
-                <Text style={styles.actionableLabel}>💡 Совет:</Text>
+                <View style={styles.actionableLabelRow}>
+                  <MonoIcon name="bookmark" size={14} color={darkTheme.colors.text} />
+                  <Text style={styles.actionableLabel}>Совет</Text>
+                </View>
                 <Text style={styles.actionableText}>{insight.actionable}</Text>
               </View>
             </Card>
@@ -167,16 +177,25 @@ export default function InsightsScreen() {
       {/* Завершённые челленджи */}
       {completedChallenges.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Завершённые челленджи 🏆</Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={styles.sectionTitle}>Завершённые челленджи</Text>
+            <MonoIcon name="award" size={18} color={darkTheme.colors.textSecondary} />
+          </View>
           {completedChallenges.slice(0, 3).map((challenge) => (
             <Card key={challenge.id} style={styles.card}>
-              <Text style={styles.completedTitle}>
-                ✅ {challenge.title}
-              </Text>
-              {challenge.badge && (
-                <Text style={styles.badgeEarned}>
-                  {challenge.badge.icon} {challenge.badge.name}
+              <View style={styles.completedRow}>
+                <MonoIcon name="check-circle" size={16} color={darkTheme.colors.textSecondary} />
+                <Text style={styles.completedTitle}>
+                  {challenge.title}
                 </Text>
+              </View>
+              {challenge.badge && (
+                <View style={styles.badgeEarnedRow}>
+                  <MonoIcon name={challenge.badge.icon} size={14} color={darkTheme.colors.textSecondary} />
+                  <Text style={styles.badgeEarned}>
+                    {challenge.badge.name}
+                  </Text>
+                </View>
               )}
             </Card>
           ))}
@@ -221,6 +240,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: darkTheme.spacing.sm,
   },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTheme.spacing.sm,
+  },
   cardTitle: {
     ...darkTheme.typography.h3,
     color: darkTheme.colors.text,
@@ -246,6 +270,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: darkTheme.spacing.md,
     marginBottom: darkTheme.spacing.md,
+  },
+  challengeBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTheme.spacing.xs,
   },
   challengeBadge: {
     ...darkTheme.typography.bodySmall,
@@ -278,11 +307,16 @@ const styles = StyleSheet.create({
     borderRadius: darkTheme.borderRadius.sm,
     marginTop: darkTheme.spacing.sm,
   },
+  actionableLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTheme.spacing.xs,
+    marginBottom: darkTheme.spacing.xs,
+  },
   actionableLabel: {
     ...darkTheme.typography.bodySmall,
     fontWeight: '600',
     color: darkTheme.colors.primary,
-    marginBottom: darkTheme.spacing.xs,
   },
   actionableText: {
     ...darkTheme.typography.bodySmall,
@@ -291,10 +325,26 @@ const styles = StyleSheet.create({
   completedTitle: {
     ...darkTheme.typography.body,
     color: darkTheme.colors.text,
+  },
+  completedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTheme.spacing.xs,
     marginBottom: darkTheme.spacing.xs,
   },
   badgeEarned: {
     ...darkTheme.typography.bodySmall,
     color: darkTheme.colors.success,
+  },
+  badgeEarnedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTheme.spacing.xs,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTheme.spacing.xs,
+    marginBottom: darkTheme.spacing.md,
   },
 });

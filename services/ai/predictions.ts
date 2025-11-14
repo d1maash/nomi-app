@@ -164,7 +164,7 @@ class PredictionEngine {
         estimatedDate: new Date(),
         recommendedWeeklySaving: 0,
         riskLevel: 'low',
-        note: 'Цель уже достигнута! 🎉',
+        note: 'Цель уже достигнута!',
       };
     }
 

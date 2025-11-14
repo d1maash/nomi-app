@@ -23,7 +23,7 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     badge: {
       id: 'coffee-breaker',
       name: 'Coffee Breaker',
-      icon: '☕',
+      icon: 'coffee',
       description: 'Неделя без кофе вне дома',
       category: 'coffee',
     },
@@ -37,7 +37,7 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     badge: {
       id: 'transport-ninja',
       name: 'Transport Ninja',
-      icon: '🚲',
+      icon: 'navigation',
       description: 'Неделя экономии на транспорте',
       category: 'transport',
     },
@@ -51,7 +51,7 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     badge: {
       id: 'home-chef',
       name: 'Home Chef',
-      icon: '👨‍🍳',
+      icon: 'home',
       description: '5 дней без доставки еды',
       category: 'food',
     },
@@ -64,7 +64,7 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     badge: {
       id: 'minimalist',
       name: 'Minimalist',
-      icon: '✨',
+      icon: 'minus-circle',
       description: 'Неделя минимальных трат',
       category: 'general',
     },
@@ -78,7 +78,7 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     badge: {
       id: 'smart-shopper',
       name: 'Smart Shopper',
-      icon: '🛍️',
+      icon: 'shopping-bag',
       description: 'Неделя без импульсивных покупок',
       category: 'shopping',
     },
@@ -91,7 +91,7 @@ const CHALLENGE_TEMPLATES: ChallengeTemplate[] = [
     badge: {
       id: 'saver',
       name: 'Saver',
-      icon: '💰',
+      icon: 'dollar-sign',
       description: '2 недели накоплений',
       category: 'general',
     },

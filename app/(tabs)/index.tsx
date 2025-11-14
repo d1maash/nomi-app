@@ -12,6 +12,7 @@ import { formatCurrency, formatDate } from '@/utils/format';
 import { aiService } from '@/services/ai';
 import { triggerHaptic } from '@/utils/haptics';
 import { startOfDay, startOfWeek, endOfWeek } from 'date-fns';
+import { MonoIcon } from '@/components/ui/mono-icon';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -80,7 +81,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.container}>
         <EmptyState
-          icon="💰"
+          iconName="pocket"
           title="Начни отслеживать траты"
           message="Добавь свою первую транзакцию, чтобы увидеть аналитику и AI-инсайты"
           actionLabel="Добавить транзакцию"
@@ -95,12 +96,17 @@ export default function HomeScreen() {
       style={styles.container}
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={darkTheme.colors.primary} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={darkTheme.colors.text} />
       }
     >
       {/* Заголовок */}
       <View style={styles.header}>
-        <Text style={styles.greeting}>Привет! 👋</Text>
+        <View style={styles.greetingRow}>
+          <Text style={styles.greeting}>Привет!</Text>
+          <View style={styles.greetingIcon}>
+            <MonoIcon name="smile" size={18} color={darkTheme.colors.text} />
+          </View>
+        </View>
         <Text style={styles.date}>{formatDate(new Date(), 'EEEE, d MMMM')}</Text>
       </View>
 
@@ -131,7 +137,10 @@ export default function HomeScreen() {
       {activeGoal && (
         <Card style={styles.card} variant="elevated">
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>🎯 {activeGoal.name}</Text>
+            <View style={styles.cardTitleRow}>
+              <MonoIcon name="target" size={18} color={darkTheme.colors.text} />
+              <Text style={styles.cardTitle}>{activeGoal.name}</Text>
+            </View>
             <Badge
               text={`${Math.round((activeGoal.currentAmount / activeGoal.targetAmount) * 100)}%`}
               variant="success"
@@ -155,7 +164,10 @@ export default function HomeScreen() {
           onPress={() => router.push('/(tabs)/insights')}
         >
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>⚡ {activeChallenge.title}</Text>
+            <View style={styles.cardTitleRow}>
+              <MonoIcon name="activity" size={18} color={darkTheme.colors.text} />
+              <Text style={styles.cardTitle}>{activeChallenge.title}</Text>
+            </View>
             <Badge text={`${activeChallenge.streak} дн.`} variant="warning" />
           </View>
           <Text style={styles.cardSubtext}>{activeChallenge.description}</Text>
@@ -166,7 +178,10 @@ export default function HomeScreen() {
       {/* AI-инсайт */}
       {(todayInsight || latestInsight) && (
         <Card style={styles.card} variant="tinted">
-          <Text style={styles.insightTitle}>💡 AI-совет</Text>
+          <View style={styles.cardTitleRow}>
+            <MonoIcon name="cpu" size={18} color={darkTheme.colors.text} />
+            <Text style={styles.insightTitle}>AI-совет</Text>
+          </View>
           <Text style={styles.insightText}>
             {todayInsight || latestInsight?.message}
           </Text>
@@ -188,7 +203,10 @@ export default function HomeScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Последние транзакции</Text>
           <TouchableOpacity onPress={() => router.push('/(tabs)/transactions')}>
-            <Text style={styles.sectionLink}>Все →</Text>
+            <View style={styles.sectionLink}>
+              <Text style={styles.sectionLinkText}>Все</Text>
+              <MonoIcon name="arrow-up-right" size={16} color={darkTheme.colors.textSecondary} />
+            </View>
           </TouchableOpacity>
         </View>
         
@@ -233,11 +251,26 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: darkTheme.spacing.xl,
+    gap: darkTheme.spacing.xs,
+  },
+  greetingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTheme.spacing.sm,
   },
   greeting: {
     ...darkTheme.typography.h1,
     color: darkTheme.colors.text,
-    marginBottom: darkTheme.spacing.xs,
+  },
+  greetingIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: darkTheme.borderRadius.full,
+    borderWidth: 1,
+    borderColor: darkTheme.colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: darkTheme.colors.surfaceLight,
   },
   date: {
     ...darkTheme.typography.body,
@@ -295,10 +328,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: darkTheme.spacing.sm,
   },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTheme.spacing.sm,
+    flex: 1,
+  },
   cardTitle: {
     ...darkTheme.typography.h3,
     color: darkTheme.colors.text,
-    flex: 1,
   },
   progress: {
     marginVertical: darkTheme.spacing.sm,
@@ -330,6 +368,11 @@ const styles = StyleSheet.create({
     color: darkTheme.colors.text,
   },
   sectionLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  sectionLinkText: {
     ...darkTheme.typography.body,
     color: darkTheme.colors.textSecondary,
   },

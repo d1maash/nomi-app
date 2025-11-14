@@ -142,7 +142,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       }
 
       setLastSyncTime(new Date());
-      console.log('✅ Data synced successfully');
+      console.log('[sync] Data synced successfully');
     } catch (error) {
       console.error('Error syncing data:', error);
     } finally {

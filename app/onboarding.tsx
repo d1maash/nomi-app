@@ -7,27 +7,33 @@ import { useStore } from '@/store';
 import { biometricService } from '@/services/biometric';
 import { notificationService } from '@/services/notifications';
 import { triggerHaptic } from '@/utils/haptics';
+import { MonoIcon } from '@/components/ui/mono-icon';
+import type { MonoIconName } from '@/types/icon';
 
 const { width } = Dimensions.get('window');
 
-const ONBOARDING_SLIDES = [
+const ONBOARDING_SLIDES: Array<{
+  icon: MonoIconName;
+  title: string;
+  description: string;
+}> = [
   {
-    emoji: '💰',
+    icon: 'pocket',
     title: 'Быстрый учёт расходов',
     description: 'Добавляй транзакции за секунды. Работает даже офлайн.',
   },
   {
-    emoji: '🤖',
+    icon: 'cpu',
     title: 'AI-помощник',
     description: 'Умный анализ трат, прогнозы и персональные советы по экономии.',
   },
   {
-    emoji: '🎯',
+    icon: 'target',
     title: 'Цели и челленджи',
     description: 'Ставь финансовые цели и выполняй челленджи с наградами.',
   },
   {
-    emoji: '🔒',
+    icon: 'shield',
     title: 'Приватность и контроль',
     description: 'Твои данные хранятся локально. AI-функции можно отключить.',
   },
@@ -74,7 +80,9 @@ export default function OnboardingScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.emoji}>{slide.emoji}</Text>
+        <View style={styles.slideIcon}>
+          <MonoIcon name={slide.icon} size={40} color={darkTheme.colors.background} />
+        </View>
         <Text style={styles.title}>{slide.title}</Text>
         <Text style={styles.description}>{slide.description}</Text>
       </View>
@@ -122,8 +130,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emoji: {
-    fontSize: 100,
+  slideIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: darkTheme.borderRadius.full,
+    backgroundColor: darkTheme.colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: darkTheme.spacing.xl,
   },
   title: {

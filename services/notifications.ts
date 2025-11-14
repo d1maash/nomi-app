@@ -110,7 +110,7 @@ class NotificationService {
    */
   async scheduleMonthlyBudgetNotification(): Promise<string> {
     return await this.scheduleNotification(
-      'Готов твой Smart-бюджет! 📊',
+      'Готов твой Smart-бюджет',
       'Проверь прогноз и рекомендации на новый месяц',
       {
         day: 1,
@@ -129,7 +129,7 @@ class NotificationService {
     progress: number
   ): Promise<string> {
     return await this.scheduleNotification(
-      `Прогресс по цели "${goalName}" 🎯`,
+      `Прогресс по цели "${goalName}"`,
       `Ты уже накопил ${progress}%! Так держать!`,
       {
         seconds: 2,
@@ -142,7 +142,7 @@ class NotificationService {
    */
   async scheduleBudgetWarning(category: string, percentage: number): Promise<string> {
     return await this.scheduleNotification(
-      'Внимание к бюджету ⚠️',
+      'Внимание к бюджету',
       `Бюджет на ${category} использован на ${percentage}%`,
       {
         seconds: 2,

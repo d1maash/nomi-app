@@ -49,12 +49,13 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: darkTheme.colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: darkTheme.colors.cardBorder,
     borderRadius: darkTheme.borderRadius.full,
     overflow: 'hidden',
   },
   progress: {
     borderRadius: darkTheme.borderRadius.full,
-    ...darkTheme.shadows.sm,
   },
 });

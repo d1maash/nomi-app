@@ -28,21 +28,22 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     borderWidth: 1,
     borderColor: darkTheme.colors.cardBorder,
+    backgroundColor: darkTheme.colors.surface,
   },
   default: {
-    backgroundColor: darkTheme.colors.surfaceLight,
+    borderColor: darkTheme.colors.cardBorder,
   },
   success: {
-    backgroundColor: `${darkTheme.colors.success}20`,
-    borderColor: `${darkTheme.colors.success}40`,
+    backgroundColor: `${darkTheme.colors.success}14`,
+    borderColor: `${darkTheme.colors.success}33`,
   },
   warning: {
-    backgroundColor: `${darkTheme.colors.warning}20`,
-    borderColor: `${darkTheme.colors.warning}40`,
+    backgroundColor: `${darkTheme.colors.warning}14`,
+    borderColor: `${darkTheme.colors.warning}33`,
   },
   error: {
-    backgroundColor: `${darkTheme.colors.error}20`,
-    borderColor: `${darkTheme.colors.error}40`,
+    backgroundColor: `${darkTheme.colors.error}14`,
+    borderColor: `${darkTheme.colors.error}33`,
   },
   text: {
     ...darkTheme.typography.caption,

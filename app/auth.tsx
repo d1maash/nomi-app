@@ -7,6 +7,7 @@ import { darkTheme } from '@/styles/theme';
 import { Button } from '@/components/ui/button';
 import { triggerHaptic } from '@/utils/haptics';
 import { isClerkConfigured } from '@/lib/clerk';
+import { MonoIcon } from '@/components/ui/mono-icon';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -98,7 +99,9 @@ export default function AuthScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.emoji}>💰</Text>
+        <View style={styles.heroIcon}>
+          <MonoIcon name="pocket" size={36} color={darkTheme.colors.background} />
+        </View>
         <Text style={styles.title}>Nomi</Text>
         <Text style={styles.subtitle}>
           Твой умный помощник в управлении финансами
@@ -180,8 +183,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emoji: {
-    fontSize: 100,
+  heroIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: darkTheme.borderRadius.full,
+    backgroundColor: darkTheme.colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: darkTheme.spacing.lg,
   },
   title: {

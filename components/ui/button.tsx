@@ -42,7 +42,7 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? darkTheme.colors.background : darkTheme.colors.primary}
+          color={variant === 'primary' ? darkTheme.colors.background : darkTheme.colors.text}
         />
       ) : (
         <Text style={[styles.text, styles[`text_${variant}`], styles[`text_${size}`]]}>
@@ -64,11 +64,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   primary: {
-    backgroundColor: darkTheme.colors.primary,
-    ...darkTheme.shadows.sm,
+    backgroundColor: darkTheme.colors.accent,
+    borderColor: darkTheme.colors.accent,
+    borderWidth: 1,
   },
   secondary: {
-    backgroundColor: darkTheme.colors.surfaceLight,
+    backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: darkTheme.colors.cardBorder,
   },
@@ -101,7 +102,7 @@ const styles = StyleSheet.create({
     color: darkTheme.colors.text,
   },
   text_ghost: {
-    color: darkTheme.colors.textSecondary,
+    color: darkTheme.colors.textTertiary,
   },
   text_small: {
     fontSize: 14,

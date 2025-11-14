@@ -2,9 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { darkTheme } from '@/styles/theme';
 import { Button } from './button';
+import { MonoIcon } from './mono-icon';
+import type { MonoIconName } from '@/types/icon';
 
 interface EmptyStateProps {
-  icon: string;
+  iconName?: MonoIconName;
   title: string;
   message: string;
   actionLabel?: string;
@@ -12,7 +14,7 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  icon,
+  iconName = 'inbox',
   title,
   message,
   actionLabel,
@@ -20,7 +22,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.icon}>{icon}</Text>
+      <View style={styles.iconBadge}>
+        <MonoIcon name={iconName} size={28} color={darkTheme.colors.text} />
+      </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
       {actionLabel && onAction && (
@@ -43,8 +47,15 @@ const styles = StyleSheet.create({
     padding: darkTheme.spacing.xxl,
     gap: darkTheme.spacing.md,
   },
-  icon: {
-    fontSize: 64,
+  iconBadge: {
+    width: 96,
+    height: 96,
+    borderRadius: darkTheme.borderRadius.full,
+    borderWidth: 1,
+    borderColor: darkTheme.colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: darkTheme.colors.surface,
   },
   title: {
     ...darkTheme.typography.h2,

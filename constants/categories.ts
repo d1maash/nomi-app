@@ -1,18 +1,19 @@
 import { TransactionCategory } from '@/types';
+import type { MonoIconName } from '@/types/icon';
 
-export const CATEGORY_ICONS: Record<TransactionCategory, string> = {
-  food: '🍽️',
-  transport: '🚗',
-  shopping: '🛍️',
-  entertainment: '🎬',
-  utilities: '💡',
-  healthcare: '⚕️',
-  education: '📚',
-  gifts: '🎁',
-  coffee: '☕',
-  subscriptions: '📱',
-  income: '💰',
-  other: '📦',
+export const CATEGORY_ICONS: Record<TransactionCategory, MonoIconName> = {
+  food: 'pie-chart',
+  transport: 'navigation',
+  shopping: 'shopping-bag',
+  entertainment: 'film',
+  utilities: 'tool',
+  healthcare: 'heart',
+  education: 'book',
+  gifts: 'gift',
+  coffee: 'coffee',
+  subscriptions: 'refresh-ccw',
+  income: 'trending-up',
+  other: 'layers',
 };
 
 export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
@@ -31,17 +32,17 @@ export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
 };
 
 export const CATEGORY_COLORS: Record<TransactionCategory, string> = {
-  food: '#FF6B6B',
-  transport: '#4ECDC4',
-  shopping: '#95E1D3',
-  entertainment: '#F38181',
-  utilities: '#AA96DA',
-  healthcare: '#FCBAD3',
-  education: '#FFFFD2',
-  gifts: '#A8E6CE',
-  coffee: '#C7CEEA',
-  subscriptions: '#FFD3B6',
-  income: '#90EE90',
-  other: '#B8B8B8',
+  food: '#F7F7F7',
+  transport: '#E4E4E4',
+  shopping: '#D2D2D2',
+  entertainment: '#C0C0C0',
+  utilities: '#AEAEAE',
+  healthcare: '#9C9C9C',
+  education: '#8A8A8A',
+  gifts: '#787878',
+  coffee: '#666666',
+  subscriptions: '#545454',
+  income: '#424242',
+  other: '#303030',
 };
 

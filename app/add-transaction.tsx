@@ -21,6 +21,35 @@ export default function AddTransactionScreen() {
   const [loading, setLoading] = useState(false);
   const [isCategoryDirty, setIsCategoryDirty] = useState(false);
 
+  const handleAmountChange = (text: string) => {
+    // Убираем все кроме цифр, запятой и точки
+    const cleaned = text.replace(/[^\d.,]/g, '');
+    
+    // Заменяем запятые на точки для единообразия
+    const normalized = cleaned.replace(/,/g, '.');
+    
+    // Если есть несколько точек, оставляем только первую
+    const parts = normalized.split('.');
+    const formatted = parts.length > 1 
+      ? `${parts[0]}.${parts.slice(1).join('')}`
+      : normalized;
+    
+    setAmount(formatted);
+  };
+
+  const formatAmountDisplay = (value: string): string => {
+    if (!value) return '';
+    
+    const parts = value.split('.');
+    const integerPart = parts[0];
+    const decimalPart = parts[1];
+    
+    // Форматируем целую часть с пробелами
+    const formatted = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    
+    return decimalPart !== undefined ? `${formatted}.${decimalPart}` : formatted;
+  };
+
   const handleSubmit = async () => {
     if (!amount || !description) {
       return;
@@ -30,8 +59,10 @@ export default function AddTransactionScreen() {
     triggerHaptic.medium();
 
     try {
-      const normalizedAmount = parseFloat(amount.replace(',', '.'));
-      if (Number.isNaN(normalizedAmount)) {
+      // Убираем пробелы и заменяем запятые на точки
+      const cleanedAmount = amount.replace(/\s/g, '').replace(',', '.');
+      const normalizedAmount = parseFloat(cleanedAmount);
+      if (Number.isNaN(normalizedAmount) || normalizedAmount <= 0) {
         return;
       }
 
@@ -76,14 +107,16 @@ export default function AddTransactionScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Input
-        label="Сумма"
-        value={amount}
-        onChangeText={setAmount}
-        keyboardType="decimal-pad"
-        placeholder="0"
-        style={styles.amountInput}
-      />
+      <View style={styles.amountContainer}>
+        <Input
+          label="Сумма"
+          value={formatAmountDisplay(amount)}
+          onChangeText={handleAmountChange}
+          keyboardType="numeric"
+          placeholder="0"
+          style={styles.amountInput}
+        />
+      </View>
 
       <Input
         label="Описание"
@@ -154,9 +187,18 @@ const styles = StyleSheet.create({
     paddingBottom: darkTheme.spacing.xxl,
     gap: darkTheme.spacing.lg,
   },
+  amountContainer: {
+    marginBottom: darkTheme.spacing.md,
+  },
   amountInput: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '600',
+    textAlign: 'left',
+    textAlignVertical: 'center',
+    paddingTop: darkTheme.spacing.md,
+    paddingBottom: darkTheme.spacing.md,
+    minHeight: 72,
+    lineHeight: 36,
   },
   switchContainer: {
     flexDirection: 'row',

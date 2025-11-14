@@ -11,10 +11,11 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { CategorySelector } from '@/components/category-selector';
 import { formatCurrency } from '@/utils/format';
-import { CATEGORY_LABELS, CATEGORY_ICONS } from '@/constants/categories';
+import { CATEGORY_LABELS, CATEGORY_ICONS, CATEGORY_COLORS } from '@/constants/categories';
 import { aiService } from '@/services/ai';
 import { addDays } from 'date-fns';
 import { triggerHaptic } from '@/utils/haptics';
+import { MonoIcon } from '@/components/ui/mono-icon';
 
 export default function BudgetsScreen() {
   const budgets = useStore((state) => state.budgets);
@@ -189,7 +190,7 @@ export default function BudgetsScreen() {
     return (
       <>
         <EmptyState
-          icon="📊"
+          iconName="pie-chart"
           title="Нет бюджетов"
           message="Создай первый бюджет, чтобы контролировать расходы"
           actionLabel="Создать бюджет"
@@ -214,9 +215,21 @@ export default function BudgetsScreen() {
             <Card key={budget.id} style={styles.card} variant="elevated">
               <View style={styles.cardHeader}>
                 <View style={styles.categoryInfo}>
-                  <Text style={styles.categoryIcon}>
-                    {CATEGORY_ICONS[budget.category]}
-                  </Text>
+                  <View
+                    style={[
+                      styles.categoryIcon,
+                      {
+                        backgroundColor: `${CATEGORY_COLORS[budget.category]}22`,
+                        borderColor: `${CATEGORY_COLORS[budget.category]}55`,
+                      },
+                    ]}
+                  >
+                    <MonoIcon
+                      name={CATEGORY_ICONS[budget.category]}
+                      size={20}
+                      color={darkTheme.colors.text}
+                    />
+                  </View>
                   <View>
                     <Text style={styles.categoryName}>
                       {CATEGORY_LABELS[budget.category]}
@@ -248,7 +261,10 @@ export default function BudgetsScreen() {
 
               {budget.prediction && (
                 <View style={styles.prediction}>
-                  <Text style={styles.predictionTitle}>🤖 AI-прогноз</Text>
+                  <View style={styles.predictionHeader}>
+                    <MonoIcon name="cpu" size={16} color={darkTheme.colors.text} />
+                    <Text style={styles.predictionTitle}>AI-прогноз</Text>
+                  </View>
                   <Text style={styles.predictionText}>
                     {budget.prediction.recommendation}
                   </Text>
@@ -305,8 +321,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   categoryIcon: {
-    fontSize: 32,
+    width: 48,
+    height: 48,
+    borderRadius: darkTheme.borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: darkTheme.spacing.sm,
+    borderWidth: 1,
   },
   categoryName: {
     ...darkTheme.typography.h3,
@@ -340,11 +361,16 @@ const styles = StyleSheet.create({
     backgroundColor: `${darkTheme.colors.primary}10`,
     borderRadius: darkTheme.borderRadius.sm,
   },
+  predictionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTheme.spacing.xs,
+    marginBottom: darkTheme.spacing.xs,
+  },
   predictionTitle: {
     ...darkTheme.typography.bodySmall,
     fontWeight: '600',
     color: darkTheme.colors.text,
-    marginBottom: darkTheme.spacing.xs,
   },
   predictionText: {
     ...darkTheme.typography.bodySmall,

@@ -1,3 +1,5 @@
+import type { MonoIconName } from './icon';
+
 // Типы данных приложения
 
 export interface User {
@@ -105,7 +107,7 @@ export interface Challenge {
 export interface Badge {
   id: string;
   name: string;
-  icon: string;
+  icon: MonoIconName;
   description: string;
   category: TransactionCategory | 'general';
   earnedAt?: Date;
