@@ -640,6 +640,11 @@ export async function getGameStats(userId: string): Promise<GameStats | null> {
         .single();
 
     if (error) {
+        // PGRST116 = запись не найдена, это нормально для нового пользователя
+        if (error.code === 'PGRST116') {
+            console.log('ℹ️ Game stats not found for user, will be created on first transaction');
+            return null;
+        }
         console.error('Error fetching game stats:', error);
         return null;
     }
@@ -697,19 +702,30 @@ export async function updateGameStats(
 export async function getUserSettings(
     userId: string
 ): Promise<AppSettings | null> {
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
         .from('users')
         .select('currency, locale')
         .eq('id', userId)
         .single();
 
-    const { data: settingsData } = await supabase
+    if (userError && userError.code !== 'PGRST116') {
+        console.error('Error fetching user data:', userError);
+    }
+
+    const { data: settingsData, error: settingsError } = await supabase
         .from('user_settings')
         .select('*')
         .eq('user_id', userId)
         .single();
 
-    if (!settingsData || !userData) return null;
+    if (settingsError && settingsError.code !== 'PGRST116') {
+        console.error('Error fetching user settings:', settingsError);
+    }
+
+    if (!settingsData || !userData) {
+        console.log('ℹ️ User settings not found, using defaults');
+        return null;
+    }
 
     return {
         currency: userData.currency || 'KZT',

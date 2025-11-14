@@ -120,8 +120,11 @@ export function useTransactions() {
   function subscribeToTransactions() {
     if (!userId) return;
     
+    // Note: используем контекст для получения клиента с JWT
+    // Subscription будет обновлен при изменении userId
+    const { supabaseClient } = useSupabaseContext();
 
-    const subscription = supabase
+    const subscription = supabaseClient
       .channel('transactions')
       .on(
         'postgres_changes',

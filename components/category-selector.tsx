@@ -5,20 +5,29 @@ import { TransactionCategory } from '@/types';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+type CategorySelectorValue = TransactionCategory | 'all';
+
 interface CategorySelectorProps {
-    selected: TransactionCategory;
-    onSelect: (category: TransactionCategory) => void;
+    selected: CategorySelectorValue;
+    onSelect: (category: CategorySelectorValue) => void;
     exclude?: TransactionCategory[];
+    showAllOption?: boolean;
+    allLabel?: string;
 }
 
 export const CategorySelector: React.FC<CategorySelectorProps> = ({
     selected,
     onSelect,
     exclude = [],
+    showAllOption = false,
+    allLabel = 'Все',
 }) => {
-    const categories = (Object.keys(CATEGORY_ICONS) as TransactionCategory[]).filter(
+    const baseCategories = (Object.keys(CATEGORY_ICONS) as TransactionCategory[]).filter(
         (cat) => !exclude.includes(cat)
     );
+    const categories: CategorySelectorValue[] = showAllOption
+        ? (['all', ...baseCategories] as CategorySelectorValue[])
+        : baseCategories;
 
     return (
         <ScrollView
@@ -26,49 +35,51 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.container}
         >
-            {categories.map((category) => (
-                <TouchableOpacity
-                    key={category}
-                    style={[
-                        styles.item,
-                        selected === category && styles.itemSelected,
-                    ]}
-                    onPress={() => onSelect(category)}
-                    activeOpacity={0.7}
-                >
-                    <View
-                        style={[
-                            styles.iconBadge,
-                            {
-                                backgroundColor:
-                                    category === 'income' && selected
-                                        ? darkTheme.colors.accent
-                                        : selected
-                                            ? darkTheme.colors.surfaceLight
-                                            : darkTheme.colors.surface,
-                                borderColor: selected
-                                    ? darkTheme.colors.accent
-                                    : darkTheme.colors.cardBorder,
-                            },
-                        ]}
+            {categories.map((category) => {
+                const isAllOption = category === 'all';
+                const isSelected = selected === category;
+                const label = isAllOption ? allLabel : CATEGORY_LABELS[category];
+                const iconName = isAllOption ? 'grid' : CATEGORY_ICONS[category];
+
+                const backgroundColor =
+                    category === 'income' && isSelected
+                        ? darkTheme.colors.accent
+                        : isSelected
+                            ? darkTheme.colors.surfaceLight
+                            : darkTheme.colors.surface;
+                const borderColor = isSelected ? darkTheme.colors.accent : darkTheme.colors.cardBorder;
+                const iconColor =
+                    category === 'income' && isSelected
+                        ? darkTheme.colors.background
+                        : darkTheme.colors.accent;
+
+                return (
+                    <TouchableOpacity
+                        key={category}
+                        style={[styles.item, isSelected && styles.itemSelected]}
+                        onPress={() => onSelect(category)}
+                        activeOpacity={0.7}
                     >
-                        <MonoIcon
-                            name={CATEGORY_ICONS[category]}
-                            size={18}
-                            color={darkTheme.colors.accent}
-                        />
-                    </View>
-                    <Text
-                        style={[
-                            styles.label,
-                            selected === category && styles.labelSelected,
-                        ]}
-                        numberOfLines={1}
-                    >
-                        {CATEGORY_LABELS[category]}
-                    </Text>
-                </TouchableOpacity>
-            ))}
+                        <View
+                            style={[
+                                styles.iconBadge,
+                                {
+                                    backgroundColor,
+                                    borderColor,
+                                },
+                            ]}
+                        >
+                            <MonoIcon name={iconName} size={18} color={iconColor} />
+                        </View>
+                        <Text
+                            style={[styles.label, isSelected && styles.labelSelected]}
+                            numberOfLines={1}
+                        >
+                            {label}
+                        </Text>
+                    </TouchableOpacity>
+                );
+            })}
         </ScrollView>
     );
 };

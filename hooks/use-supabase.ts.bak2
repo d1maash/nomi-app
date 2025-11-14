@@ -121,7 +121,7 @@ export function useTransactions() {
     if (!userId) return;
     
 
-    const subscription = supabase
+    const subscription = supabaseClient
       .channel('transactions')
       .on(
         'postgres_changes',

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useStore } from '@/store';
 import { darkTheme } from '@/styles/theme';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,17 +12,21 @@ import { aiService } from '@/services/ai';
 import { triggerHaptic } from '@/utils/haptics';
 import { startOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { MonoIcon } from '@/components/ui/mono-icon';
+import { useTransactions, useBudgets, useGoals, useChallenges, useInsights } from '@/hooks/use-supabase';
+import { useSupabase } from '@/components/supabase-provider';
 
 export default function HomeScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [todayInsight, setTodayInsight] = useState<string>('');
 
-  const transactions = useStore((state) => state.transactions);
-  const goals = useStore((state) => state.goals);
-  const budgets = useStore((state) => state.budgets);
-  const challenges = useStore((state) => state.challenges);
-  const insights = useStore((state) => state.insights);
+  // Загружаем данные из Supabase
+  const { transactions, isLoading: transactionsLoading, refresh: refreshTransactions } = useTransactions();
+  const { budgets, isLoading: budgetsLoading } = useBudgets();
+  const { goals, isLoading: goalsLoading } = useGoals();
+  const { challenges, isLoading: challengesLoading } = useChallenges();
+  const { insights, isLoading: insightsLoading } = useInsights();
+  const { isInitialized } = useSupabase();
 
   // Вычисления
   const todayStart = startOfDay(new Date());
@@ -68,7 +71,11 @@ export default function HomeScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     triggerHaptic.light();
-    await loadInsight();
+    // Обновляем данные из Supabase
+    await Promise.all([
+      refreshTransactions(),
+      loadInsight(),
+    ]);
     setRefreshing(false);
   };
 
@@ -77,7 +84,8 @@ export default function HomeScreen() {
     router.push('/add-transaction');
   };
 
-  if (transactions.length === 0) {
+  // Показываем пустое состояние только если данные загружены и транзакций нет
+  if (!transactionsLoading && transactions.length === 0) {
     return (
       <View style={styles.container}>
         <EmptyState

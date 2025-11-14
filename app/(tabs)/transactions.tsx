@@ -1,8 +1,9 @@
 import { CategorySelector } from '@/components/category-selector';
+import { useSupabase } from '@/components/supabase-provider';
 import { TransactionItem } from '@/components/transaction-item';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MonoIcon } from '@/components/ui/mono-icon';
-import { useStore } from '@/store';
+import { useTransactions } from '@/hooks/use-supabase';
 import { darkTheme } from '@/styles/theme';
 import { Transaction, TransactionCategory } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
@@ -27,7 +28,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 export default function TransactionsScreen() {
     const router = useRouter();
-    const transactions = useStore((state) => state.transactions);
+    const { transactions, isLoading } = useTransactions();
+    const { isInitialized } = useSupabase();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState<TransactionCategory | 'all'>('all');
@@ -194,8 +196,9 @@ export default function TransactionsScreen() {
 
             {/* Фильтр по категориям */}
             <CategorySelector
-                selected={filterCategory as TransactionCategory}
+                selected={filterCategory}
                 onSelect={(cat) => setFilterCategory(cat)}
+                showAllOption
             />
 
             {/* Список транзакций с группировкой */}

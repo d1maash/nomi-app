@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useStore } from '@/store';
 import { TransactionCategory } from '@/types';
 import { darkTheme } from '@/styles/theme';
 import { Input } from '@/components/ui/input';
@@ -9,10 +8,13 @@ import { Button } from '@/components/ui/button';
 import { CategorySelector } from '@/components/category-selector';
 import { aiService } from '@/services/ai';
 import { triggerHaptic } from '@/utils/haptics';
+import { useTransactions } from '@/hooks/use-supabase';
+import { useSupabase } from '@/components/supabase-provider';
 
 export default function AddTransactionScreen() {
   const router = useRouter();
-  const addTransaction = useStore((state) => state.addTransaction);
+  const { add: addTransaction } = useTransactions();
+  const { userId, isInitialized } = useSupabase();
 
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -51,7 +53,7 @@ export default function AddTransactionScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!amount || !description) {
+    if (!amount || !description || !userId || !isInitialized) {
       return;
     }
 
@@ -87,19 +89,22 @@ export default function AddTransactionScreen() {
         }
       }
 
-      addTransaction({
+      // Сохраняем в Supabase
+      await addTransaction({
         amount: normalizedAmount,
         description,
         category: finalCategory,
         type: isIncome ? 'income' : 'expense',
         date: new Date(),
         aiSuggested,
+        tags: [],
       });
 
       triggerHaptic.success();
       router.back();
     } catch (error) {
       console.error('Error adding transaction:', error);
+      triggerHaptic.error();
     } finally {
       setLoading(false);
     }
@@ -155,8 +160,11 @@ export default function AddTransactionScreen() {
           </View>
           <CategorySelector
             selected={category}
-            onSelect={(selected) => {
-              setCategory(selected);
+            onSelect={(selectedCategory) => {
+              if (selectedCategory === 'all') {
+                return;
+              }
+              setCategory(selectedCategory);
               setIsCategoryDirty(true);
             }}
             exclude={['income'] as TransactionCategory[]}
