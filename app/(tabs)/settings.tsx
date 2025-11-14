@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useStore } from '@/store';
 import { darkTheme } from '@/styles/theme';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,13 +8,14 @@ import { biometricService } from '@/services/biometric';
 import { triggerHaptic } from '@/utils/haptics';
 import { useAuth } from '@clerk/clerk-expo';
 import { MonoIcon } from '@/components/ui/mono-icon';
+import { useSettings } from '@/hooks/use-supabase';
+import { useSupabase } from '@/components/supabase-provider';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { signOut, isLoaded } = useAuth();
-  const settings = useStore((state) => state.settings);
-  const updateSettings = useStore((state) => state.updateSettings);
-  const resetAppState = useStore((state) => state.resetAppState);
+  const { settings, update: updateSettings } = useSettings();
+  const { isInitialized } = useSupabase();
 
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState('');
@@ -34,23 +34,27 @@ export default function SettingsScreen() {
   };
 
   const handleBiometricToggle = async (value: boolean) => {
+    if (!isInitialized) return;
+    
     if (value) {
       const authenticated = await biometricService.authenticate(
         'Подтвердите для включения защиты'
       );
       if (authenticated) {
         await biometricService.setBiometricLockEnabled(true);
-        updateSettings({ biometricLockEnabled: true });
+        await updateSettings({ biometricLockEnabled: true });
         triggerHaptic.success();
       }
     } else {
       await biometricService.setBiometricLockEnabled(false);
-      updateSettings({ biometricLockEnabled: false });
+      await updateSettings({ biometricLockEnabled: false });
     }
   };
 
   const handleNotificationToggle = async (key: keyof typeof settings.notifications, value: boolean) => {
-    updateSettings({
+    if (!isInitialized) return;
+    
+    await updateSettings({
       notifications: {
         ...settings.notifications,
         [key]: value,
@@ -59,8 +63,10 @@ export default function SettingsScreen() {
     triggerHaptic.light();
   };
 
-  const handlePrivacyToggle = (key: keyof typeof settings.privacy, value: boolean) => {
-    updateSettings({
+  const handlePrivacyToggle = async (key: keyof typeof settings.privacy, value: boolean) => {
+    if (!isInitialized) return;
+    
+    await updateSettings({
       privacy: {
         ...settings.privacy,
         [key]: value,
@@ -80,9 +86,6 @@ export default function SettingsScreen() {
       console.log('[Settings] Starting sign out...');
       console.log('[Settings] signOut function exists:', !!signOut);
       console.log('[Settings] isLoaded:', isLoaded);
-
-      // Сбрасываем состояние приложения перед выходом
-      await resetAppState();
 
       // Выполняем выход из Clerk
       if (signOut) {

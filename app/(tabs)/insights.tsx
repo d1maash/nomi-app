@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { useStore } from '@/store';
 import { darkTheme } from '@/styles/theme';
 import { Card } from '@/components/ui/card';
 import { ProgressBar } from '@/components/ui/progress-bar';
@@ -11,18 +10,21 @@ import { aiService } from '@/services/ai';
 import { triggerHaptic } from '@/utils/haptics';
 import { AIInsight, Challenge } from '@/types';
 import { MonoIcon } from '@/components/ui/mono-icon';
+import { useTransactions, useBudgets, useGoals, useChallenges, useInsights } from '@/hooks/use-supabase';
+import { useSupabase } from '@/components/supabase-provider';
 
 export default function InsightsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [generatedInsights, setGeneratedInsights] = useState<AIInsight[]>([]);
   const [suggestedChallenge, setSuggestedChallenge] = useState<Omit<Challenge, 'id' | 'progress' | 'streak' | 'completed'> | null>(null);
 
-  const transactions = useStore((state) => state.transactions);
-  const budgets = useStore((state) => state.budgets);
-  const goals = useStore((state) => state.goals);
-  const challenges = useStore((state) => state.challenges);
-  const addChallenge = useStore((state) => state.addChallenge);
-  const markInsightAsRead = useStore((state) => state.markInsightAsRead);
+  // Загружаем данные из Supabase
+  const { transactions } = useTransactions();
+  const { budgets } = useBudgets();
+  const { goals } = useGoals();
+  const { challenges, add: addChallenge } = useChallenges();
+  const { insights, markAsRead: markInsightAsRead } = useInsights();
+  const { isInitialized } = useSupabase();
 
   const loadInsights = useCallback(async () => {
     const generated = await aiService.generateInsights(transactions, budgets, goals);
@@ -48,20 +50,26 @@ export default function InsightsScreen() {
     setRefreshing(false);
   };
 
-  const handleAcceptChallenge = () => {
-    if (suggestedChallenge) {
+  const handleAcceptChallenge = async () => {
+    if (suggestedChallenge && isInitialized) {
       triggerHaptic.success();
-      addChallenge(suggestedChallenge);
+      await addChallenge(suggestedChallenge);
       setSuggestedChallenge(null);
     }
   };
 
-  const handleInsightPress = (insight: AIInsight) => {
-    markInsightAsRead(insight.id);
+  const handleInsightPress = async (insight: AIInsight) => {
+    if (isInitialized) {
+      await markInsightAsRead(insight.id);
+    }
   };
 
   const activeChallenges = challenges.filter((c) => !c.completed);
   const completedChallenges = challenges.filter((c) => c.completed);
+
+  console.log('🔵 [Insights] Total challenges:', challenges.length);
+  console.log('🔵 [Insights] Active challenges:', activeChallenges.length);
+  console.log('🔵 [Insights] Completed challenges:', completedChallenges.length);
 
   if (transactions.length === 0) {
     return (

@@ -1,19 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useStore } from '@/store';
 import { darkTheme } from '@/styles/theme';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { CATEGORY_COLORS, CATEGORY_ICONS, CATEGORY_LABELS } from '@/constants/categories';
 import { triggerHaptic } from '@/utils/haptics';
 import { MonoIcon } from '@/components/ui/mono-icon';
+import { useTransactions } from '@/hooks/use-supabase';
+import { useSupabase } from '@/components/supabase-provider';
 
 export default function TransactionDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const transactions = useStore((state) => state.transactions);
-  const deleteTransaction = useStore((state) => state.deleteTransaction);
+  const { transactions, remove: deleteTransaction } = useTransactions();
+  const { isInitialized } = useSupabase();
 
   const transaction = transactions.find((t) => t.id === id);
 
@@ -26,14 +27,16 @@ export default function TransactionDetailScreen() {
   }
 
   const handleDelete = () => {
+    if (!isInitialized) return;
+    
     Alert.alert('Удалить транзакцию?', 'Это действие нельзя отменить', [
       { text: 'Отмена', style: 'cancel' },
       {
         text: 'Удалить',
         style: 'destructive',
-        onPress: () => {
+        onPress: async () => {
           triggerHaptic.success();
-          deleteTransaction(transaction.id);
+          await deleteTransaction(transaction.id);
           router.back();
         },
       },

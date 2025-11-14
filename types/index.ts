@@ -135,6 +135,7 @@ export interface AppSettings {
   locale: string;
   theme: 'dark' | 'light';
   biometricLockEnabled: boolean;
+  hasCompletedOnboarding: boolean;
   notifications: NotificationSettings;
   privacy: PrivacySettings;
 }

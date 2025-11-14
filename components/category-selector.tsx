@@ -65,11 +65,11 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                                 styles.iconBadge,
                                 {
                                     backgroundColor,
-                                    borderColor,
+                                    borderColor: isSelected ? 'transparent' : borderColor,
                                 },
                             ]}
                         >
-                            <MonoIcon name={iconName} size={18} color={iconColor} />
+                            <MonoIcon name={iconName} size={20} color={iconColor} />
                         </View>
                         <Text
                             style={[styles.label, isSelected && styles.labelSelected]}

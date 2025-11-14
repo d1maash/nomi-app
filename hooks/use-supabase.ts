@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@clerk/clerk-expo';
 import { supabase } from '@/lib/supabase';
+import { useSupabase as useSupabaseContext } from '@/components/supabase-provider';
 import {
   getUserId,
   upsertUser,
@@ -34,7 +35,7 @@ import {
   updateUserSettings,
   syncAllData,
 } from '@/services/supabase-sync';
-import { Transaction, Budget, Goal, AIInsight, Challenge, Badge, AnomalyAlert } from '@/types';
+import { Transaction, Budget, Goal, AIInsight, Challenge, Badge, AnomalyAlert, AppSettings } from '@/types';
 
 /**
  * Хук для работы с данными пользователя в Supabase
@@ -119,7 +120,6 @@ export function useTransactions() {
 
   function subscribeToTransactions() {
     if (!userId) return;
-    
 
     const subscription = supabase
       .channel('transactions')
@@ -322,6 +322,7 @@ export function useGoals() {
  */
 export function useInsights() {
   const { userId } = useSupabaseData();
+  const { supabaseClient } = useSupabaseContext();
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -372,11 +373,41 @@ export function useInsights() {
 
   async function add(insight: Omit<AIInsight, 'id'>) {
     if (!userId) throw new Error('User not authenticated');
-    await createInsight(userId, insight);
+    
+    const { data, error } = await supabaseClient
+      .from('ai_insights')
+      .insert({
+        user_id: userId,
+        type: insight.type,
+        title: insight.title,
+        message: insight.message,
+        actionable: insight.actionable,
+        priority: insight.priority,
+        category: insight.category,
+        date: insight.date.toISOString(),
+        read: insight.read ?? false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating insight:', error);
+      throw error;
+    }
+
+    return data;
   }
 
   async function markAsRead(id: string) {
-    await markInsightAsRead(id);
+    const { error } = await supabaseClient
+      .from('ai_insights')
+      .update({ read: true })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error marking insight as read:', error);
+      throw error;
+    }
   }
 
   return {
@@ -393,6 +424,7 @@ export function useInsights() {
  */
 export function useChallenges() {
   const { userId } = useSupabaseData();
+  const { supabaseClient } = useSupabaseContext();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -406,12 +438,17 @@ export function useChallenges() {
   async function loadChallenges() {
     if (!userId) return;
     
+    console.log('🔵 [useChallenges] Loading challenges for userId:', userId);
     setIsLoading(true);
     try {
       const data = await getChallenges(userId);
+      console.log('🔵 [useChallenges] Loaded challenges:', data.length, 'challenges');
+      if (data.length > 0) {
+        console.log('🔵 [useChallenges] First challenge:', JSON.stringify(data[0], null, 2));
+      }
       setChallenges(data);
     } catch (error) {
-      console.error('Error loading challenges:', error);
+      console.error('❌ [useChallenges] Error loading challenges:', error);
     } finally {
       setIsLoading(false);
     }
@@ -443,15 +480,70 @@ export function useChallenges() {
 
   async function add(challenge: Omit<Challenge, 'id' | 'progress' | 'streak' | 'completed'>) {
     if (!userId) throw new Error('User not authenticated');
-    await createChallenge(userId, challenge);
+    
+    console.log('🔵 [useChallenges] Creating challenge with userId:', userId);
+    console.log('🔵 [useChallenges] supabaseClient:', supabaseClient === supabase ? 'DEFAULT (no JWT)' : 'WITH JWT');
+    
+    // Используем supabaseClient с JWT вместо глобального supabase
+    const { data, error } = await supabaseClient
+      .from('challenges')
+      .insert({
+        user_id: userId,
+        title: challenge.title,
+        description: challenge.description,
+        type: challenge.type,
+        target_category: challenge.targetCategory,
+        target_amount: challenge.targetAmount,
+        duration: challenge.duration,
+        start_date: challenge.startDate.toISOString(),
+        end_date: challenge.endDate.toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ [useChallenges] Error creating challenge:', error);
+      throw error;
+    }
+
+    console.log('✅ [useChallenges] Challenge created successfully');
+    
+    // Перезагружаем список челленджей
+    await loadChallenges();
+    
+    return data;
   }
 
   async function update(id: string, updates: Partial<Challenge>) {
-    await updateChallenge(id, updates);
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (updates.progress !== undefined) updateData.progress = updates.progress;
+    if (updates.streak !== undefined) updateData.streak = updates.streak;
+    if (updates.completed !== undefined) updateData.completed = updates.completed;
+
+    const { error } = await supabaseClient
+      .from('challenges')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating challenge:', error);
+      throw error;
+    }
   }
 
   async function remove(id: string) {
-    await deleteChallenge(id);
+    const { error } = await supabaseClient
+      .from('challenges')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting challenge:', error);
+      throw error;
+    }
   }
 
   return {
@@ -461,6 +553,78 @@ export function useChallenges() {
     update,
     remove,
     refresh: loadChallenges,
+  };
+}
+
+/**
+ * Хук для работы с настройками пользователя
+ */
+export function useSettings() {
+  const { userId, isLoading: isUserLoading } = useSupabaseData();
+  const [settings, setSettings] = useState<AppSettings>({
+    currency: 'KZT',
+    locale: 'ru-RU',
+    theme: 'dark',
+    biometricLockEnabled: false,
+    hasCompletedOnboarding: true,
+    notifications: {
+      enabled: true,
+      monthlyBudget: true,
+      goalProgress: true,
+      challenges: true,
+      insights: true,
+      recurringReminders: true,
+    },
+    privacy: {
+      aiCategorization: true,
+      aiPredictions: true,
+      aiCoaching: true,
+      anonymousComparison: false,
+      dataExportEnabled: true,
+    },
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const loadSettings = useCallback(async () => {
+    if (!userId) return;
+
+    setIsLoading(true);
+    try {
+      const data = await getUserSettings(userId);
+      if (data) {
+        setSettings(data);
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  const update = useCallback(
+    async (updates: Partial<AppSettings>) => {
+      if (!userId) return;
+
+      try {
+        await updateUserSettings(userId, updates);
+        setSettings((prev) => ({ ...prev, ...updates }));
+      } catch (error) {
+        console.error('Error updating settings:', error);
+        throw error;
+      }
+    },
+    [userId]
+  );
+
+  return {
+    settings,
+    isLoading: isLoading || isUserLoading,
+    update,
+    refresh: loadSettings,
   };
 }
 

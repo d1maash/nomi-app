@@ -434,6 +434,7 @@ export async function markInsightAsRead(id: string) {
 
 // === ЧЕЛЛЕНДЖИ ===
 export async function getChallenges(userId: string): Promise<Challenge[]> {
+    console.log('🔵 [getChallenges] Fetching challenges for userId:', userId);
     const { data, error } = await supabase
         .from('challenges')
         .select('*')
@@ -441,9 +442,11 @@ export async function getChallenges(userId: string): Promise<Challenge[]> {
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching challenges:', error);
+        console.error('❌ [getChallenges] Error fetching challenges:', error);
         return [];
     }
+
+    console.log('🔵 [getChallenges] Raw data from Supabase:', data?.length, 'challenges');
 
     return data.map((c) => ({
         id: c.id,
@@ -732,6 +735,7 @@ export async function getUserSettings(
         locale: userData.locale || 'ru-RU',
         theme: (settingsData.theme as 'dark' | 'light') || 'dark',
         biometricLockEnabled: settingsData.biometric_lock_enabled || false,
+        hasCompletedOnboarding: settingsData.has_completed_onboarding ?? true,
         notifications: {
             enabled: settingsData.notifications_enabled || true,
             monthlyBudget: settingsData.notify_monthly_budget || true,
@@ -761,6 +765,8 @@ export async function updateUserSettings(
     if (updates.theme !== undefined) settingsUpdate.theme = updates.theme;
     if (updates.biometricLockEnabled !== undefined)
         settingsUpdate.biometric_lock_enabled = updates.biometricLockEnabled;
+    if (updates.hasCompletedOnboarding !== undefined)
+        settingsUpdate.has_completed_onboarding = updates.hasCompletedOnboarding;
 
     if (updates.notifications) {
         if (updates.notifications.enabled !== undefined)

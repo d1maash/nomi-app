@@ -3,12 +3,13 @@ import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { darkTheme } from '@/styles/theme';
 import { Button } from '@/components/ui/button';
-import { useStore } from '@/store';
 import { biometricService } from '@/services/biometric';
 import { notificationService } from '@/services/notifications';
 import { triggerHaptic } from '@/utils/haptics';
 import { MonoIcon } from '@/components/ui/mono-icon';
 import type { MonoIconName } from '@/types/icon';
+import { useSettings } from '@/hooks/use-supabase';
+import { useSupabase } from '@/components/supabase-provider';
 
 const { width } = Dimensions.get('window');
 
@@ -42,7 +43,8 @@ const ONBOARDING_SLIDES: Array<{
 export default function OnboardingScreen() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const router = useRouter();
-  const completeOnboarding = useStore((state) => state.completeOnboarding);
+  const { update: updateSettings } = useSettings();
+  const { isInitialized } = useSupabase();
 
   const handleNext = () => {
     triggerHaptic.light();
@@ -69,7 +71,9 @@ export default function OnboardingScreen() {
     await notificationService.requestPermissions();
 
     // Отмечаем онбординг как пройденный
-    completeOnboarding();
+    if (isInitialized) {
+      await updateSettings({ hasCompletedOnboarding: true });
+    }
 
     // Переходим на экран авторизации
     router.replace('/auth');
