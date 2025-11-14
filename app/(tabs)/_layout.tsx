@@ -1,24 +1,44 @@
 import { Text } from 'react-native';
 import { Tabs, Redirect } from 'expo-router';
-import { useUser } from '@clerk/clerk-expo';
+import { useUser, useAuth } from '@clerk/clerk-expo';
 import { useStore } from '@/store';
 import { darkTheme } from '@/styles/theme';
 
 export default function TabsLayout() {
   const user = useUser();
+  const { isSignedIn: authIsSignedIn, isLoaded: authIsLoaded } = useAuth();
   const onboardingCompleted = useStore((state) => state.onboardingCompleted);
 
+  // Проверяем, настроен ли Clerk
+  const clerkConfigured = Boolean(process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  
   // Clerk может быть не настроен - проверяем
-  const isLoaded = user?.isLoaded ?? true;
-  const isSignedIn = user?.isSignedIn ?? true; // Разрешаем доступ без Clerk
+  const isLoaded = user?.isLoaded ?? authIsLoaded ?? true;
+  
+  // Используем useAuth для более надежной проверки состояния входа
+  // Если Clerk настроен, используем его состояние, иначе разрешаем доступ
+  const isSignedIn = clerkConfigured 
+    ? (authIsSignedIn ?? user?.isSignedIn ?? false) 
+    : true;
+
+  console.log('[TabsLayout] State:', {
+    isLoaded,
+    isSignedIn,
+    authIsSignedIn,
+    userIsSignedIn: user?.isSignedIn,
+    clerkConfigured,
+    onboardingCompleted
+  });
 
   // Перенаправляем на онбординг, если не пройден
   if (isLoaded && !onboardingCompleted) {
+    console.log('[TabsLayout] Onboarding not completed, redirecting to /onboarding');
     return <Redirect href="/onboarding" />;
   }
 
   // Перенаправляем на авторизацию, если не залогинен (только если Clerk настроен)
-  if (isLoaded && !isSignedIn && process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+  if (isLoaded && !isSignedIn && clerkConfigured) {
+    console.log('[TabsLayout] User not signed in, redirecting to /auth');
     return <Redirect href="/auth" />;
   }
 

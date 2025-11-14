@@ -7,26 +7,14 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { biometricService } from '@/services/biometric';
 import { triggerHaptic } from '@/utils/haptics';
-
-// Безопасный импорт Clerk
-type OptionalSignOutHook = (() => { signOut?: () => Promise<void> }) | null;
-
-let useSignOut: OptionalSignOutHook = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const clerkExpo = require('@clerk/clerk-expo');
-  useSignOut = clerkExpo.useSignOut;
-} catch {
-  // Clerk не настроен
-}
-
-const fallbackSignOutHook = () => null;
+import { useAuth } from '@clerk/clerk-expo';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const signOutHook = (useSignOut ?? fallbackSignOutHook)();
+  const { signOut, isLoaded } = useAuth();
   const settings = useStore((state) => state.settings);
   const updateSettings = useStore((state) => state.updateSettings);
+  const resetAppState = useStore((state) => state.resetAppState);
 
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState('');
@@ -80,17 +68,54 @@ export default function SettingsScreen() {
     triggerHaptic.light();
   };
 
-  const handleSignOut = async () => {
+  const performSignOut = async () => {
+    try {
+      // Проверяем, загружается ли Clerk
+      if (!isLoaded) {
+        Alert.alert('Подождите', 'Clerk ещё загружается. Попробуйте снова через несколько секунд.');
+        return;
+      }
+
+      console.log('[Settings] Starting sign out...');
+      console.log('[Settings] signOut function exists:', !!signOut);
+      console.log('[Settings] isLoaded:', isLoaded);
+
+      // Сбрасываем состояние приложения перед выходом
+      await resetAppState();
+
+      // Выполняем выход из Clerk
+      if (signOut) {
+        console.log('[Settings] Calling signOut()...');
+        await signOut();
+        console.log('[Settings] Sign out successful, redirecting to /auth...');
+        
+        // Явно перенаправляем на страницу входа после успешного выхода
+        // Используем небольшую задержку, чтобы Clerk успел обновить состояние
+        setTimeout(() => {
+          console.log('[Settings] Executing redirect to /auth');
+          router.replace('/auth');
+        }, 300);
+      } else {
+        // Если Clerk не настроен или signOut недоступен, перенаправляем напрямую
+        console.log('[Settings] signOut not available, redirecting to /auth directly');
+        router.replace('/auth');
+      }
+    } catch (error) {
+      console.error('[Settings] Sign out error:', error);
+      Alert.alert('Ошибка', 'Не удалось выйти из аккаунта. Попробуйте ещё раз позже.');
+      // В случае ошибки всё равно перенаправляем на страницу входа
+      router.replace('/auth');
+    }
+  };
+
+  const handleSignOut = () => {
     Alert.alert('Выход', 'Вы уверены, что хотите выйти?', [
       { text: 'Отмена', style: 'cancel' },
       {
         text: 'Выйти',
         style: 'destructive',
-        onPress: async () => {
-          if (signOutHook?.signOut) {
-            await signOutHook.signOut();
-          }
-          router.replace('/auth');
+        onPress: () => {
+          void performSignOut();
         },
       },
     ]);

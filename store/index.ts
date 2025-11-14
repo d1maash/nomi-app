@@ -64,6 +64,7 @@ interface AppState {
   // Загрузка и сохранение
   loadFromStorage: () => void;
   saveToStorage: () => void;
+  resetAppState: () => Promise<void>;
 }
 
 const defaultSettings: AppSettings = {
@@ -348,5 +349,42 @@ export const useStore = create<AppState>((set, get) => ({
       console.error('Save to storage error:', error);
     }
   },
-}));
 
+  resetAppState: async () => {
+    const keepOnboardingCompleted = get().onboardingCompleted;
+
+    set({
+      transactions: [],
+      budgets: [],
+      goals: [],
+      insights: [],
+      challenges: [],
+      badges: [],
+      anomalyAlerts: [],
+      gameStats: defaultGameStats,
+      settings: defaultSettings,
+      isLoading: false,
+      onboardingCompleted: keepOnboardingCompleted,
+    });
+
+    try {
+      const keysToClear = [
+        storageKeys.USER,
+        storageKeys.TRANSACTIONS,
+        storageKeys.BUDGETS,
+        storageKeys.GOALS,
+        storageKeys.INSIGHTS,
+        storageKeys.CHALLENGES,
+        storageKeys.BADGES,
+        storageKeys.SETTINGS,
+        storageKeys.GAME_STATS,
+        storageKeys.BIOMETRIC_ENABLED,
+        storageKeys.LAST_SYNC,
+        storageKeys.CATEGORY_CORRECTIONS,
+      ];
+      await Promise.all(keysToClear.map((key) => storageUtils.delete(key)));
+    } catch (error) {
+      console.error('Reset store error:', error);
+    }
+  },
+}));

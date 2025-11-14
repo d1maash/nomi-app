@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useOAuth } from '@clerk/clerk-expo';
+import { useAuth, useOAuth } from '@clerk/clerk-expo';
 import * as WebBrowser from 'expo-web-browser';
 import { darkTheme } from '@/styles/theme';
 import { Button } from '@/components/ui/button';
@@ -25,13 +25,25 @@ export default function AuthScreen() {
   const clerkReady = isClerkConfigured();
   const [currentProvider, setCurrentProvider] = useState<'apple' | 'google' | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { isSignedIn } = useAuth();
 
   const { startOAuthFlow: startGoogleOAuth } = useOAuth({ strategy: 'oauth_google' });
   const { startOAuthFlow: startAppleOAuth } = useOAuth({ strategy: 'oauth_apple' });
 
+  useEffect(() => {
+    if (isSignedIn) {
+      router.replace('/(tabs)');
+    }
+  }, [isSignedIn, router]);
+
   const handleOAuthSignIn = useCallback(
     async (provider: 'google' | 'apple') => {
       triggerHaptic.light();
+
+      if (isSignedIn) {
+        router.replace('/(tabs)');
+        return;
+      }
 
       if (!clerkReady) {
         setErrorMessage('Clerk не настроен. Заполни ключ в .env (см. CLERK_SETUP.md).');
@@ -70,12 +82,17 @@ export default function AuthScreen() {
         );
       } catch (error) {
         console.error(`[Clerk] ${provider} OAuth error`, error);
+        if (isAlreadySignedInError(error)) {
+          triggerHaptic.success();
+          router.replace('/(tabs)');
+          return;
+        }
         setErrorMessage('Авторизация не удалась. См. CLERK_SETUP.md и убедись, что Native API включен.');
       } finally {
         setCurrentProvider(null);
       }
     },
-    [clerkReady, startGoogleOAuth, startAppleOAuth, router]
+    [clerkReady, startGoogleOAuth, startAppleOAuth, router, isSignedIn]
   );
 
   return (
@@ -130,6 +147,27 @@ export default function AuthScreen() {
     </View>
   );
 }
+
+const isAlreadySignedInError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const possibleArray = (error as { errors?: Array<{ message?: string; code?: string }> }).errors;
+  if (Array.isArray(possibleArray)) {
+    return possibleArray.some(
+      (err) =>
+        err?.code === 'session_exists' ||
+        (err?.message && err.message.toLowerCase().includes("you're already signed in"))
+    );
+  }
+
+  const message =
+    (error as { message?: string }).message ||
+    (error as { toString?: () => string }).toString?.();
+
+  return Boolean(message && message.toLowerCase().includes("you're already signed in"));
+};
 
 const styles = StyleSheet.create({
   container: {
