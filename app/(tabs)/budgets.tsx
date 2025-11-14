@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
-import { useStore } from '@/store';
 import { Budget, TransactionCategory } from '@/types';
 import { darkTheme } from '@/styles/theme';
 import { Card } from '@/components/ui/card';
@@ -16,11 +15,13 @@ import { aiService } from '@/services/ai';
 import { addDays } from 'date-fns';
 import { triggerHaptic } from '@/utils/haptics';
 import { MonoIcon } from '@/components/ui/mono-icon';
+import { useBudgets, useTransactions } from '@/hooks/use-supabase';
+import { useSupabase } from '@/components/supabase-provider';
 
 export default function BudgetsScreen() {
-  const budgets = useStore((state) => state.budgets);
-  const transactions = useStore((state) => state.transactions);
-  const addBudget = useStore((state) => state.addBudget);
+  const { budgets, add: addBudget, isLoading: budgetsLoading } = useBudgets();
+  const { transactions, isLoading: transactionsLoading } = useTransactions();
+  const { userId, isInitialized } = useSupabase();
   
   const [budgetsWithPredictions, setBudgetsWithPredictions] = useState<
     (Budget & { prediction?: any })[]
@@ -83,30 +84,36 @@ export default function BudgetsScreen() {
     return { variant: 'success', label: 'В норме' };
   };
 
-  const handleCreateBudget = () => {
+  const handleCreateBudget = async () => {
     const normalizedLimit = parseFloat(draftBudget.limit.replace(',', '.'));
-    if (Number.isNaN(normalizedLimit)) {
+    if (Number.isNaN(normalizedLimit) || !userId || !isInitialized) {
       return;
     }
 
-    const startDate = new Date();
-    const endDate = addDays(startDate, draftBudget.period === 'weekly' ? 7 : 30);
+    try {
+      const startDate = new Date();
+      const endDate = addDays(startDate, draftBudget.period === 'weekly' ? 7 : 30);
 
-    addBudget({
-      category: draftBudget.category,
-      limit: normalizedLimit,
-      period: draftBudget.period,
-      startDate,
-      endDate,
-    });
+      // Сохраняем в Supabase
+      await addBudget({
+        category: draftBudget.category,
+        limit: normalizedLimit,
+        period: draftBudget.period,
+        startDate,
+        endDate,
+      });
 
-    triggerHaptic.success();
-    setDraftBudget((prev) => ({
-      ...prev,
-      limit: '',
-      category: 'food',
-    }));
-    setCreateModalVisible(false);
+      triggerHaptic.success();
+      setDraftBudget((prev) => ({
+        ...prev,
+        limit: '',
+        category: 'food',
+      }));
+      setCreateModalVisible(false);
+    } catch (error) {
+      console.error('Error creating budget:', error);
+      triggerHaptic.error();
+    }
   };
 
   const renderBudgetModal = () => (
@@ -163,9 +170,12 @@ export default function BudgetsScreen() {
           <Text style={styles.modalLabel}>Категория</Text>
           <CategorySelector
             selected={draftBudget.category}
-            onSelect={(category) =>
-              setDraftBudget((prev) => ({ ...prev, category }))
-            }
+            onSelect={(selectedCategory) => {
+              if (selectedCategory === 'all') {
+                return;
+              }
+              setDraftBudget((prev) => ({ ...prev, category: selectedCategory }));
+            }}
             exclude={['income'] as TransactionCategory[]}
           />
 

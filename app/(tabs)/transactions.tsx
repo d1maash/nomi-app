@@ -1,8 +1,9 @@
 import { CategorySelector } from '@/components/category-selector';
+import { useSupabase } from '@/components/supabase-provider';
 import { TransactionItem } from '@/components/transaction-item';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MonoIcon } from '@/components/ui/mono-icon';
-import { useStore } from '@/store';
+import { useTransactions } from '@/hooks/use-supabase';
 import { darkTheme } from '@/styles/theme';
 import { Transaction, TransactionCategory } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
@@ -27,7 +28,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 export default function TransactionsScreen() {
     const router = useRouter();
-    const transactions = useStore((state) => state.transactions);
+    const { transactions, isLoading } = useTransactions();
+    const { isInitialized } = useSupabase();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState<TransactionCategory | 'all'>('all');
@@ -108,98 +110,111 @@ export default function TransactionsScreen() {
     };
 
     return (
-        <View style={styles.container}>
-            {/* Заголовок и статистика */}
-            <View style={styles.pageHeader}>
-                <View style={styles.headerTop}>
-                    <View>
-                        <Text style={styles.title}>Транзакции</Text>
-                        <Text style={styles.subtitle}>
-                            {filteredTransactions.length} {filteredTransactions.length === 1 ? 'операция' : 'операций'}
-                        </Text>
-                    </View>
-                    <TouchableOpacity style={styles.addButton} onPress={handleAddTransaction}>
-                        <MonoIcon name="plus" size={20} color={darkTheme.colors.background} />
-                    </TouchableOpacity>
-                </View>
-
-                {/* Статистика */}
-                {transactions.length > 0 && (
-                    <View style={styles.statsContainer}>
-                        <View style={styles.statsRow}>
-                            <View style={styles.statCard}>
-                                <View style={styles.statIconBadge}>
-                                    <MonoIcon name="arrow-up-circle" size={18} color={darkTheme.colors.accent} />
-                                </View>
-                                <View style={styles.statInfo}>
-                                    <Text style={styles.statLabel}>Доход</Text>
-                                    <Text style={[styles.statValue, styles.statIncome]}>
-                                        {formatCurrency(stats.income)}
-                                    </Text>
-                                </View>
-                            </View>
-
-                            <View style={styles.statCard}>
-                                <View style={styles.statIconBadge}>
-                                    <MonoIcon name="arrow-down-circle" size={18} color={darkTheme.colors.accent} />
-                                </View>
-                                <View style={styles.statInfo}>
-                                    <Text style={styles.statLabel}>Расход</Text>
-                                    <Text style={[styles.statValue, styles.statExpense]}>
-                                        {formatCurrency(stats.expense)}
-                                    </Text>
-                                </View>
-                            </View>
-                        </View>
-
-                        <View style={styles.statCardWide}>
-                            <View style={styles.statIconBadge}>
-                                <MonoIcon name="calendar" size={18} color={darkTheme.colors.accent} />
-                            </View>
-                            <View style={styles.statInfo}>
-                                <Text style={styles.statLabel}>Траты этого месяца</Text>
-                                <Text style={styles.statValue}>
-                                    {formatCurrency(stats.monthlyExpense)}
+        <SectionList
+            style={styles.container}
+            sections={filteredTransactions.length === 0 ? [] : groupedTransactions}
+            keyExtractor={(item) => item.id}
+            ListHeaderComponent={(
+                <>
+                    {/* Заголовок и статистика */}
+                    <View style={styles.pageHeader}>
+                        <View style={styles.headerTop}>
+                            <View>
+                                <Text style={styles.title}>Транзакции</Text>
+                                <Text style={styles.subtitle}>
+                                    {filteredTransactions.length} {filteredTransactions.length === 1 ? 'операция' : 'операций'}
                                 </Text>
                             </View>
+                            <TouchableOpacity style={styles.addButton} onPress={handleAddTransaction}>
+                                <MonoIcon name="plus" size={20} color={darkTheme.colors.background} />
+                            </TouchableOpacity>
                         </View>
+
+                        {/* Статистика */}
+                        {transactions.length > 0 && (
+                            <View style={styles.statsContainer}>
+                                <View style={styles.statsRow}>
+                                    <View style={styles.statCard}>
+                                        <View style={styles.statIconBadge}>
+                                            <MonoIcon name="arrow-up-circle" size={18} color={darkTheme.colors.accent} />
+                                        </View>
+                                        <View style={styles.statInfo}>
+                                            <Text style={styles.statLabel}>Доход</Text>
+                                            <Text style={[styles.statValue, styles.statIncome]}>
+                                                {formatCurrency(stats.income)}
+                                            </Text>
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.statCard}>
+                                        <View style={styles.statIconBadge}>
+                                            <MonoIcon name="arrow-down-circle" size={18} color={darkTheme.colors.accent} />
+                                        </View>
+                                        <View style={styles.statInfo}>
+                                            <Text style={styles.statLabel}>Расход</Text>
+                                            <Text style={[styles.statValue, styles.statExpense]}>
+                                                {formatCurrency(stats.expense)}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </View>
+
+                                <View style={styles.statCardWide}>
+                                    <View style={styles.statIconBadge}>
+                                        <MonoIcon name="calendar" size={18} color={darkTheme.colors.accent} />
+                                    </View>
+                                    <View style={styles.statInfo}>
+                                        <Text style={styles.statLabel}>Траты этого месяца</Text>
+                                        <Text style={styles.statValue}>
+                                            {formatCurrency(stats.monthlyExpense)}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+                        )}
                     </View>
-                )}
-            </View>
 
-            {/* Поиск и сортировка */}
-            <View style={styles.searchRow}>
-                <View style={styles.searchBar}>
-                    <View style={styles.searchIconBadge}>
-                        <MonoIcon name="search" size={16} color={darkTheme.colors.accent} />
+                    {/* Поиск и сортировка */}
+                    <View style={styles.searchRow}>
+                        <View style={styles.searchBar}>
+                            <MonoIcon name="search" size={18} color={darkTheme.colors.textTertiary} style={styles.searchIcon} />
+                            <TextInput
+                                value={searchQuery}
+                                onChangeText={(text) => setSearchQuery(text)}
+                                placeholder="Поиск транзакций..."
+                                placeholderTextColor={darkTheme.colors.textTertiary}
+                                style={styles.searchInputNative}
+                            />
+                            {searchQuery.length > 0 && (
+                                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                                    <MonoIcon name="x" size={18} color={darkTheme.colors.textTertiary} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                        <TouchableOpacity
+                            style={styles.sortButton}
+                            onPress={() => {
+                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                setSortDesc((prev) => !prev);
+                            }}
+                        >
+                            <MonoIcon name={sortDesc ? 'arrow-down' : 'arrow-up'} size={18} color={darkTheme.colors.text} />
+                            <Text style={styles.sortButtonText}>{sortDesc ? 'Новые' : 'Старые'}</Text>
+                        </TouchableOpacity>
                     </View>
-                    <TextInput
-                        value={searchQuery}
-                        onChangeText={(text) => setSearchQuery(text)}
-                        placeholder="Поиск транзакций..."
-                        placeholderTextColor={darkTheme.colors.textTertiary}
-                        style={styles.searchInputNative}
-                    />
-                </View>
-                <TouchableOpacity
-                    style={styles.sortButton}
-                    onPress={() => {
-                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                        setSortDesc((prev) => !prev);
-                    }}
-                >
-                    <MonoIcon name={sortDesc ? 'chevron-down' : 'chevron-up'} size={18} color={darkTheme.colors.accent} />
-                </TouchableOpacity>
-            </View>
 
-            {/* Фильтр по категориям */}
-            <CategorySelector
-                selected={filterCategory as TransactionCategory}
-                onSelect={(cat) => setFilterCategory(cat)}
-            />
+                    {/* Фильтр по категориям - скрываем при поиске */}
+                    {!searchQuery && (
+                        <CategorySelector
+                            selected={filterCategory}
+                            onSelect={(cat) => setFilterCategory(cat)}
+                            showAllOption
+                        />
+                    )}
 
-            {/* Список транзакций с группировкой */}
-            {filteredTransactions.length === 0 ? (
+                </>
+            )}
+            ListEmptyComponent={
                 <EmptyState
                     iconName="layers"
                     title="Нет транзакций"
@@ -211,35 +226,31 @@ export default function TransactionsScreen() {
                     actionLabel={searchQuery || filterCategory !== 'all' ? undefined : 'Добавить'}
                     onAction={searchQuery || filterCategory !== 'all' ? undefined : handleAddTransaction}
                 />
-            ) : (
-                <SectionList
-                    sections={groupedTransactions}
-                    keyExtractor={(item) => item.id}
-                    renderSectionHeader={({ section }) => (
-                        <View style={styles.dateHeader}>
-                            <View style={styles.dateHeaderLeft}>
-                                <View style={styles.dateIconBadge}>
-                                    <MonoIcon name="clock" size={14} color={darkTheme.colors.accent} />
-                                </View>
-                                <View>
-                                    <Text style={styles.dateLabel}>{section.title}</Text>
-                                    <Text style={styles.dateSubtitle}>{section.subtitle}</Text>
-                                </View>
-                            </View>
-                            <View style={styles.dateSummary}>
-                                <Text style={styles.dateSummaryText}>{formatCurrency(section.total)}</Text>
-                            </View>
+            }
+            renderSectionHeader={({ section }) => (
+                <View style={styles.dateHeader}>
+                    <View style={styles.dateHeaderLeft}>
+                        <View style={styles.dateIconBadge}>
+                            <MonoIcon name="clock" size={14} color={darkTheme.colors.accent} />
                         </View>
-                    )}
-                    renderItem={({ item }) => (
-                        <TransactionItem transaction={item} onPress={() => handleTransactionPress(item)} />
-                    )}
-                    style={styles.listWrapper}
-                    contentContainerStyle={styles.list}
-                    stickySectionHeadersEnabled
-                />
+                        <View>
+                            <Text style={styles.dateLabel}>{section.title}</Text>
+                            <Text style={styles.dateSubtitle}>{section.subtitle}</Text>
+                        </View>
+                    </View>
+                    <View style={styles.dateSummary}>
+                        <Text style={styles.dateSummaryText}>{formatCurrency(section.total)}</Text>
+                    </View>
+                </View>
             )}
-        </View>
+            renderItem={({ item }) => (
+                <View style={styles.transactionWrapper}>
+                    <TransactionItem transaction={item} onPress={() => handleTransactionPress(item)} />
+                </View>
+            )}
+            contentContainerStyle={styles.list}
+            stickySectionHeadersEnabled
+        />
     );
 }
 
@@ -346,52 +357,54 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: darkTheme.spacing.sm,
         paddingHorizontal: darkTheme.spacing.xl,
-        marginBottom: darkTheme.spacing.sm,
+        marginBottom: darkTheme.spacing.lg,
     },
     searchBar: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: darkTheme.spacing.sm,
         backgroundColor: darkTheme.colors.surface,
         borderRadius: darkTheme.borderRadius.lg,
         borderWidth: 1,
         borderColor: darkTheme.colors.cardBorder,
         paddingHorizontal: darkTheme.spacing.md,
-        paddingVertical: darkTheme.spacing.sm,
         height: 48,
     },
-    searchIconBadge: {
-        width: 32,
-        height: 32,
-        borderRadius: darkTheme.borderRadius.md,
-        backgroundColor: darkTheme.colors.surfaceLight,
-        alignItems: 'center',
-        justifyContent: 'center',
+    searchIcon: {
+        marginRight: darkTheme.spacing.sm,
     },
     searchInputNative: {
         flex: 1,
         ...darkTheme.typography.body,
         color: darkTheme.colors.text,
         paddingVertical: 0,
-        fontSize: 14,
+        fontSize: 15,
+    },
+    clearButton: {
+        padding: darkTheme.spacing.xs,
+        marginLeft: darkTheme.spacing.xs,
     },
     sortButton: {
-        width: 48,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: darkTheme.spacing.xs,
+        paddingHorizontal: darkTheme.spacing.md,
         height: 48,
         borderRadius: darkTheme.borderRadius.lg,
         borderWidth: 1,
         borderColor: darkTheme.colors.cardBorder,
         backgroundColor: darkTheme.colors.surface,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
-    listWrapper: {
-        flex: 1,
+    sortButtonText: {
+        ...darkTheme.typography.bodySmall,
+        color: darkTheme.colors.text,
+        fontSize: 13,
     },
     list: {
-        paddingHorizontal: darkTheme.spacing.xl,
         paddingBottom: darkTheme.spacing.xxl,
+    },
+    transactionWrapper: {
+        paddingHorizontal: darkTheme.spacing.xl,
     },
     dateHeader: {
         flexDirection: 'row',
@@ -399,6 +412,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: darkTheme.spacing.md,
         paddingHorizontal: darkTheme.spacing.sm,
+        marginHorizontal: darkTheme.spacing.xl,
         marginBottom: darkTheme.spacing.sm,
         backgroundColor: darkTheme.colors.backgroundSoft,
         borderRadius: darkTheme.borderRadius.md,

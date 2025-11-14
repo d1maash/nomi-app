@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { ClerkProvider } from '@clerk/clerk-expo';
 import * as SplashScreen from 'expo-splash-screen';
-import { useStore } from '@/store';
 import { CLERK_CONFIG, clerkTokenCache } from '@/lib/clerk';
 import { biometricService } from '@/services/biometric';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -16,14 +15,10 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
   const [isBiometricChecked, setIsBiometricChecked] = useState(false);
-  const loadFromStorage = useStore((state) => state.loadFromStorage);
 
   useEffect(() => {
     async function prepare() {
       try {
-        // Загружаем данные из хранилища
-        await loadFromStorage();
-
         // Проверяем биометрию, если включена
         const biometricEnabled = await biometricService.isBiometricLockEnabled();
         if (biometricEnabled) {
@@ -44,7 +39,7 @@ export default function RootLayout() {
     }
 
     prepare();
-  }, [loadFromStorage]);
+  }, []);
 
   if (isLoading || !isBiometricChecked) {
     return (

@@ -1,14 +1,15 @@
 import { Tabs, Redirect } from 'expo-router';
 import { useUser, useAuth } from '@clerk/clerk-expo';
-import { useStore } from '@/store';
 import { darkTheme } from '@/styles/theme';
 import { MonoIcon } from '@/components/ui/mono-icon';
 import type { MonoIconName } from '@/types/icon';
+import { useSettings } from '@/hooks/use-supabase';
 
 export default function TabsLayout() {
   const user = useUser();
   const { isSignedIn: authIsSignedIn, isLoaded: authIsLoaded } = useAuth();
-  const onboardingCompleted = useStore((state) => state.onboardingCompleted);
+  const { settings } = useSettings();
+  const onboardingCompleted = settings.hasCompletedOnboarding;
 
   // Проверяем, настроен ли Clerk
   const clerkConfigured = Boolean(process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);

@@ -434,6 +434,7 @@ export async function markInsightAsRead(id: string) {
 
 // === ЧЕЛЛЕНДЖИ ===
 export async function getChallenges(userId: string): Promise<Challenge[]> {
+    console.log('🔵 [getChallenges] Fetching challenges for userId:', userId);
     const { data, error } = await supabase
         .from('challenges')
         .select('*')
@@ -441,9 +442,11 @@ export async function getChallenges(userId: string): Promise<Challenge[]> {
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching challenges:', error);
+        console.error('❌ [getChallenges] Error fetching challenges:', error);
         return [];
     }
+
+    console.log('🔵 [getChallenges] Raw data from Supabase:', data?.length, 'challenges');
 
     return data.map((c) => ({
         id: c.id,
@@ -640,6 +643,11 @@ export async function getGameStats(userId: string): Promise<GameStats | null> {
         .single();
 
     if (error) {
+        // PGRST116 = запись не найдена, это нормально для нового пользователя
+        if (error.code === 'PGRST116') {
+            console.log('ℹ️ Game stats not found for user, will be created on first transaction');
+            return null;
+        }
         console.error('Error fetching game stats:', error);
         return null;
     }
@@ -697,25 +705,37 @@ export async function updateGameStats(
 export async function getUserSettings(
     userId: string
 ): Promise<AppSettings | null> {
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
         .from('users')
         .select('currency, locale')
         .eq('id', userId)
         .single();
 
-    const { data: settingsData } = await supabase
+    if (userError && userError.code !== 'PGRST116') {
+        console.error('Error fetching user data:', userError);
+    }
+
+    const { data: settingsData, error: settingsError } = await supabase
         .from('user_settings')
         .select('*')
         .eq('user_id', userId)
         .single();
 
-    if (!settingsData || !userData) return null;
+    if (settingsError && settingsError.code !== 'PGRST116') {
+        console.error('Error fetching user settings:', settingsError);
+    }
+
+    if (!settingsData || !userData) {
+        console.log('ℹ️ User settings not found, using defaults');
+        return null;
+    }
 
     return {
         currency: userData.currency || 'KZT',
         locale: userData.locale || 'ru-RU',
         theme: (settingsData.theme as 'dark' | 'light') || 'dark',
         biometricLockEnabled: settingsData.biometric_lock_enabled || false,
+        hasCompletedOnboarding: settingsData.has_completed_onboarding ?? true,
         notifications: {
             enabled: settingsData.notifications_enabled || true,
             monthlyBudget: settingsData.notify_monthly_budget || true,
@@ -745,6 +765,8 @@ export async function updateUserSettings(
     if (updates.theme !== undefined) settingsUpdate.theme = updates.theme;
     if (updates.biometricLockEnabled !== undefined)
         settingsUpdate.biometric_lock_enabled = updates.biometricLockEnabled;
+    if (updates.hasCompletedOnboarding !== undefined)
+        settingsUpdate.has_completed_onboarding = updates.hasCompletedOnboarding;
 
     if (updates.notifications) {
         if (updates.notifications.enabled !== undefined)
