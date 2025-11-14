@@ -1,35 +1,109 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Text } from 'react-native';
+import { Tabs, Redirect } from 'expo-router';
+import { useUser } from '@clerk/clerk-expo';
+import { useStore } from '@/store';
+import { darkTheme } from '@/styles/theme';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+export default function TabsLayout() {
+  const user = useUser();
+  const onboardingCompleted = useStore((state) => state.onboardingCompleted);
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  // Clerk может быть не настроен - проверяем
+  const isLoaded = user?.isLoaded ?? true;
+  const isSignedIn = user?.isSignedIn ?? true; // Разрешаем доступ без Clerk
+
+  // Перенаправляем на онбординг, если не пройден
+  if (isLoaded && !onboardingCompleted) {
+    return <Redirect href="/onboarding" />;
+  }
+
+  // Перенаправляем на авторизацию, если не залогинен (только если Clerk настроен)
+  if (isLoaded && !isSignedIn && process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    return <Redirect href="/auth" />;
+  }
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        tabBarActiveTintColor: darkTheme.colors.primary,
+        tabBarInactiveTintColor: darkTheme.colors.textSecondary,
+        tabBarStyle: {
+          backgroundColor: darkTheme.colors.backgroundSoft,
+          borderTopColor: darkTheme.colors.cardBorder,
+          height: 90,
+          paddingBottom: 30,
+          paddingTop: 12,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+        },
+        headerStyle: {
+          backgroundColor: darkTheme.colors.background,
+        },
+        headerTintColor: darkTheme.colors.text,
+        headerShadowVisible: false,
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Главная',
+          tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
+          headerShown: false,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="transactions"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Транзакции',
+          tabBarIcon: ({ color }) => <TabIcon name="list" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="budgets"
+        options={{
+          title: 'Бюджеты',
+          tabBarIcon: ({ color }) => <TabIcon name="chart" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="insights"
+        options={{
+          title: 'Инсайты',
+          tabBarIcon: ({ color }) => <TabIcon name="bulb" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Настройки',
+          tabBarIcon: ({ color }) => <TabIcon name="settings" color={color} />,
         }}
       />
     </Tabs>
+  );
+}
+
+// Простые иконки на основе emoji
+function TabIcon({ name, color }: { name: string; color: string }) {
+  const icons: Record<string, string> = {
+    home: '🏠',
+    list: '📋',
+    chart: '📊',
+    bulb: '💡',
+    settings: '⚙️',
+  };
+
+  return (
+    <Text
+      style={{
+        fontSize: 24,
+        color,
+        opacity: color === darkTheme.colors.textSecondary ? 0.6 : 1,
+      }}
+    >
+      {icons[name] || '•'}
+    </Text>
   );
 }
