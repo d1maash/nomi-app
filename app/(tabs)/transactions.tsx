@@ -1,8 +1,8 @@
 import { CategorySelector } from '@/components/category-selector';
-import { useSupabase } from '@/components/supabase-provider';
 import { TransactionItem } from '@/components/transaction-item';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MonoIcon } from '@/components/ui/mono-icon';
+import { TactilePressable } from '@/components/ui/tactile-pressable';
 import { useTransactions } from '@/hooks/use-supabase';
 import { darkTheme } from '@/styles/theme';
 import { Transaction, TransactionCategory } from '@/types';
@@ -23,15 +23,23 @@ import {
     UIManager,
     View,
 } from 'react-native';
+import Animated, { FadeInDown, Layout as ReanimatedLayout } from 'react-native-reanimated';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+type TransactionSection = {
+    title: string;
+    subtitle: string;
+    total: number;
+    data: Transaction[];
+    index: number;
+};
+
 export default function TransactionsScreen() {
     const router = useRouter();
     const { transactions, isLoading, refresh } = useTransactions();
-    const { isInitialized } = useSupabase();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState<TransactionCategory | 'all'>('all');
@@ -55,7 +63,7 @@ export default function TransactionsScreen() {
 
     // Группировка по датам
     const groupedTransactions = useMemo(() => {
-        const groups: Array<{ title: string; subtitle: string; total: number; data: Transaction[] }> = [];
+        const groups: Omit<TransactionSection, 'index'>[] = [];
         const dateMap = new Map<string, Transaction[]>();
 
         filteredTransactions.forEach((transaction) => {
@@ -80,12 +88,14 @@ export default function TransactionsScreen() {
             groups.push({ title, subtitle, total, data: txs });
         });
 
-        return groups.sort((a, b) => {
-            // Используем parseDate для корректной сортировки
-            const dateA = parseDate(a.data[0].date).getTime();
-            const dateB = parseDate(b.data[0].date).getTime();
-            return sortDesc ? dateB - dateA : dateA - dateB;
-        });
+        return groups
+            .sort((a, b) => {
+                // Используем parseDate для корректной сортировки
+                const dateA = parseDate(a.data[0].date).getTime();
+                const dateB = parseDate(b.data[0].date).getTime();
+                return sortDesc ? dateB - dateA : dateA - dateB;
+            })
+            .map((group, index) => ({ ...group, index }));
     }, [filteredTransactions, sortDesc]);
 
     // Статистика
@@ -144,7 +154,7 @@ export default function TransactionsScreen() {
             ListHeaderComponent={(
                 <>
                     {/* Заголовок и статистика */}
-                    <View style={styles.pageHeader}>
+                    <Animated.View entering={FadeInDown.duration(300)} style={styles.pageHeader}>
                         <View style={styles.headerTop}>
                             <View>
                                 <Text style={styles.title}>Транзакции</Text>
@@ -152,16 +162,16 @@ export default function TransactionsScreen() {
                                     {filteredTransactions.length} {filteredTransactions.length === 1 ? 'операция' : 'операций'}
                                 </Text>
                             </View>
-                            <TouchableOpacity style={styles.addButton} onPress={handleAddTransaction}>
+                            <TactilePressable style={styles.addButton} onPress={handleAddTransaction} activeScale={0.9}>
                                 <MonoIcon name="plus" size={20} color={darkTheme.colors.background} />
-                            </TouchableOpacity>
+                            </TactilePressable>
                         </View>
 
                         {/* Статистика */}
                         {transactions.length > 0 && (
                             <View style={styles.statsContainer}>
                                 <View style={styles.statsRow}>
-                                    <View style={styles.statCard}>
+                                    <Animated.View entering={FadeInDown.delay(80)} style={styles.statCard}>
                                         <View style={styles.statIconBadge}>
                                             <MonoIcon name="arrow-up-circle" size={18} color={darkTheme.colors.accent} />
                                         </View>
@@ -171,9 +181,9 @@ export default function TransactionsScreen() {
                                                 {formatCurrency(stats.income)}
                                             </Text>
                                         </View>
-                                    </View>
+                                    </Animated.View>
 
-                                    <View style={styles.statCard}>
+                                    <Animated.View entering={FadeInDown.delay(120)} style={styles.statCard}>
                                         <View style={styles.statIconBadge}>
                                             <MonoIcon name="arrow-down-circle" size={18} color={darkTheme.colors.accent} />
                                         </View>
@@ -183,10 +193,10 @@ export default function TransactionsScreen() {
                                                 {formatCurrency(stats.expense)}
                                             </Text>
                                         </View>
-                                    </View>
+                                    </Animated.View>
                                 </View>
 
-                                <View style={styles.statCardWide}>
+                                <Animated.View entering={FadeInDown.delay(160)} style={styles.statCardWide}>
                                     <View style={styles.statIconBadge}>
                                         <MonoIcon name="calendar" size={18} color={darkTheme.colors.accent} />
                                     </View>
@@ -196,13 +206,13 @@ export default function TransactionsScreen() {
                                             {formatCurrency(stats.monthlyExpense)}
                                         </Text>
                                     </View>
-                                </View>
+                                </Animated.View>
                             </View>
                         )}
-                    </View>
+                    </Animated.View>
 
                     {/* Поиск и сортировка */}
-                    <View style={styles.searchRow}>
+                    <Animated.View entering={FadeInDown.delay(200)} style={styles.searchRow}>
                         <View style={styles.searchBar}>
                             <MonoIcon name="search" size={18} color={darkTheme.colors.textTertiary} style={styles.searchIcon} />
                             <TextInput
@@ -218,7 +228,7 @@ export default function TransactionsScreen() {
                                 </TouchableOpacity>
                             )}
                         </View>
-                        <TouchableOpacity
+                        <TactilePressable
                             style={styles.sortButton}
                             onPress={() => {
                                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -227,16 +237,18 @@ export default function TransactionsScreen() {
                         >
                             <MonoIcon name={sortDesc ? 'arrow-down' : 'arrow-up'} size={18} color={darkTheme.colors.text} />
                             <Text style={styles.sortButtonText}>{sortDesc ? 'Новые' : 'Старые'}</Text>
-                        </TouchableOpacity>
-                    </View>
+                        </TactilePressable>
+                    </Animated.View>
 
                     {/* Фильтр по категориям - скрываем при поиске */}
                     {!searchQuery && (
-                        <CategorySelector
-                            selected={filterCategory}
-                            onSelect={(cat) => setFilterCategory(cat)}
-                            showAllOption
-                        />
+                        <Animated.View entering={FadeInDown.delay(240)}>
+                            <CategorySelector
+                                selected={filterCategory}
+                                onSelect={(cat) => setFilterCategory(cat)}
+                                showAllOption
+                            />
+                        </Animated.View>
                     )}
 
                 </>
@@ -255,7 +267,11 @@ export default function TransactionsScreen() {
                 />
             }
             renderSectionHeader={({ section }) => (
-                <View style={styles.dateHeader}>
+                <Animated.View
+                    style={styles.dateHeader}
+                    entering={FadeInDown.delay(120 + section.index * 50)}
+                    layout={ReanimatedLayout.springify()}
+                >
                     <View style={styles.dateHeaderLeft}>
                         <View style={styles.dateIconBadge}>
                             <MonoIcon name="clock" size={14} color={darkTheme.colors.accent} />
@@ -268,12 +284,16 @@ export default function TransactionsScreen() {
                     <View style={styles.dateSummary}>
                         <Text style={styles.dateSummaryText}>{formatCurrency(section.total)}</Text>
                     </View>
-                </View>
+                </Animated.View>
             )}
-            renderItem={({ item }) => (
-                <View style={styles.transactionWrapper}>
+            renderItem={({ item, index: itemIndex, section }) => (
+                <Animated.View
+                    style={styles.transactionWrapper}
+                    entering={FadeInDown.delay(140 + section.index * 40 + itemIndex * 18)}
+                    layout={ReanimatedLayout.springify()}
+                >
                     <TransactionItem transaction={item} onPress={() => handleTransactionPress(item)} />
-                </View>
+                </Animated.View>
             )}
             contentContainerStyle={styles.list}
             stickySectionHeadersEnabled

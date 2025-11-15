@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Transaction } from '@/types';
 import { darkTheme } from '@/styles/theme';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { CATEGORY_COLORS, CATEGORY_ICONS, CATEGORY_LABELS } from '@/constants/categories';
 import { MonoIcon } from '@/components/ui/mono-icon';
+import { TactilePressable } from '@/components/ui/tactile-pressable';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -18,11 +19,12 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   const isIncome = transaction.type === 'income';
 
   return (
-    <TouchableOpacity
+    <TactilePressable
       style={styles.container}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeScale={0.95}
     >
+      <View style={styles.glow} pointerEvents="none" />
       <View style={styles.iconContainer}>
         <View
           style={[
@@ -36,7 +38,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
           <MonoIcon name={CATEGORY_ICONS[transaction.category]} size={20} />
         </View>
       </View>
-      
+
       <View style={styles.content}>
         <View style={styles.row}>
           <Text style={styles.description} numberOfLines={1}>
@@ -56,7 +58,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
           </Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </TactilePressable>
   );
 };
 
@@ -69,6 +71,13 @@ const styles = StyleSheet.create({
     marginBottom: darkTheme.spacing.sm,
     borderWidth: 1,
     borderColor: darkTheme.colors.cardBorder,
+    overflow: 'hidden',
+  },
+  glow: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: darkTheme.borderRadius.xl,
+    opacity: 0.65,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
   },
   iconContainer: {
     width: 52,

@@ -15,7 +15,6 @@ nomi-app/
 │   │   ├── budgets.tsx      # Бюджеты
 │   │   ├── insights.tsx     # AI-инсайты и челленджи
 │   │   └── settings.tsx     # Настройки
-│   ├── onboarding.tsx       # Онбординг
 │   ├── auth.tsx             # Авторизация через Clerk
 │   └── add-transaction.tsx  # Добавление транзакции
 │
@@ -227,4 +226,3 @@ interface AIProvider {
 ## Лицензия
 
 Приватный проект
-

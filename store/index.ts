@@ -26,7 +26,7 @@ interface AppState {
 
   // Состояния UI
   isLoading: boolean;
-  onboardingCompleted: boolean;
+  hasHydrated: boolean;
 
   // Действия - Транзакции
   addTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => void;
@@ -55,7 +55,6 @@ interface AppState {
 
   // Действия - Настройки
   updateSettings: (updates: Partial<AppSettings>) => void;
-  completeOnboarding: () => void;
 
   // Действия - Геймификация
   awardBadge: (badge: Badge) => void;
@@ -111,7 +110,7 @@ export const useStore = create<AppState>((set, get) => ({
   gameStats: defaultGameStats,
   settings: defaultSettings,
   isLoading: false,
-  onboardingCompleted: false,
+  hasHydrated: false,
 
   // Транзакции
   addTransaction: (transaction) => {
@@ -267,11 +266,6 @@ export const useStore = create<AppState>((set, get) => ({
     get().saveToStorage();
   },
 
-  completeOnboarding: () => {
-    set({ onboardingCompleted: true });
-    storageUtils.set(storageKeys.ONBOARDING_COMPLETED, true).catch(console.error);
-  },
-
   // Геймификация
   awardBadge: (badge) => {
     set((state) => ({
@@ -303,7 +297,6 @@ export const useStore = create<AppState>((set, get) => ({
         badges,
         settings,
         gameStats,
-        onboardingCompleted,
       ] = await Promise.all([
         storageUtils.get<Transaction[]>(storageKeys.TRANSACTIONS),
         storageUtils.get<Budget[]>(storageKeys.BUDGETS),
@@ -313,7 +306,6 @@ export const useStore = create<AppState>((set, get) => ({
         storageUtils.get<Badge[]>(storageKeys.BADGES),
         storageUtils.get<AppSettings>(storageKeys.SETTINGS),
         storageUtils.get<GameStats>(storageKeys.GAME_STATS),
-        storageUtils.get<boolean>(storageKeys.ONBOARDING_COMPLETED),
       ]);
 
       set({
@@ -325,10 +317,11 @@ export const useStore = create<AppState>((set, get) => ({
         badges: badges || [],
         settings: settings || defaultSettings,
         gameStats: gameStats || defaultGameStats,
-        onboardingCompleted: onboardingCompleted || false,
+        hasHydrated: true,
       });
     } catch (error) {
       console.error('Load from storage error:', error);
+      set({ hasHydrated: true });
     }
   },
 
@@ -351,8 +344,6 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   resetAppState: async () => {
-    const keepOnboardingCompleted = get().onboardingCompleted;
-
     set({
       transactions: [],
       budgets: [],
@@ -364,7 +355,6 @@ export const useStore = create<AppState>((set, get) => ({
       gameStats: defaultGameStats,
       settings: defaultSettings,
       isLoading: false,
-      onboardingCompleted: keepOnboardingCompleted,
     });
 
     try {

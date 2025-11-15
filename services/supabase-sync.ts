@@ -736,7 +736,6 @@ export async function getUserSettings(
         locale: userData.locale || 'ru-RU',
         theme: (settingsData.theme as 'dark' | 'light') || 'dark',
         biometricLockEnabled: settingsData.biometric_lock_enabled || false,
-        hasCompletedOnboarding: settingsData.has_completed_onboarding ?? true,
         notifications: {
             enabled: settingsData.notifications_enabled || true,
             monthlyBudget: settingsData.notify_monthly_budget || true,
@@ -766,9 +765,6 @@ export async function updateUserSettings(
     if (updates.theme !== undefined) settingsUpdate.theme = updates.theme;
     if (updates.biometricLockEnabled !== undefined)
         settingsUpdate.biometric_lock_enabled = updates.biometricLockEnabled;
-    if (updates.hasCompletedOnboarding !== undefined)
-        settingsUpdate.has_completed_onboarding = updates.hasCompletedOnboarding;
-
     if (updates.notifications) {
         if (updates.notifications.enabled !== undefined)
             settingsUpdate.notifications_enabled = updates.notifications.enabled;
@@ -857,4 +853,3 @@ export async function syncAllData(userId: string) {
         throw error;
     }
 }
-

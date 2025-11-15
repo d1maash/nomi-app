@@ -6,6 +6,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { darkTheme } from '@/styles/theme';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SupabaseProvider } from '@/components/supabase-provider';
+import { useStore } from '@/store';
 
 // Предотвращаем автоматическое скрытие splash screen
 SplashScreen.preventAutoHideAsync();
@@ -13,6 +14,8 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
   const [isBiometricChecked, setIsBiometricChecked] = useState(false);
+  const loadFromStorage = useStore((state) => state.loadFromStorage);
+  const hasHydrated = useStore((state) => state.hasHydrated);
 
   useEffect(() => {
     async function prepare() {
@@ -39,7 +42,11 @@ export default function RootLayout() {
     prepare();
   }, []);
 
-  if (isLoading || !isBiometricChecked) {
+  useEffect(() => {
+    loadFromStorage();
+  }, [loadFromStorage]);
+
+  if (isLoading || !isBiometricChecked || !hasHydrated) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color={darkTheme.colors.primary} />
@@ -51,11 +58,13 @@ export default function RootLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
+        animation: 'fade',
+        animationDuration: 320,
+        gestureEnabled: true,
         contentStyle: { backgroundColor: darkTheme.colors.background },
       }}
     >
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="onboarding" />
       <Stack.Screen name="auth" />
       <Stack.Screen 
         name="auth/callback" 
@@ -67,6 +76,7 @@ export default function RootLayout() {
         name="transaction/[id]"
         options={{
           presentation: 'modal',
+          animation: 'slide_from_bottom',
           headerShown: true,
           headerTitle: 'Транзакция',
           headerStyle: { backgroundColor: darkTheme.colors.background },
@@ -77,6 +87,7 @@ export default function RootLayout() {
         name="add-transaction"
         options={{
           presentation: 'modal',
+          animation: 'slide_from_bottom',
           headerShown: true,
           headerTitle: 'Новая транзакция',
           headerStyle: { backgroundColor: darkTheme.colors.background },

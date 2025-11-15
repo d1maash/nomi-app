@@ -555,7 +555,6 @@ export function useSettings() {
     locale: 'ru-RU',
     theme: 'dark',
     biometricLockEnabled: false,
-    hasCompletedOnboarding: true,
     notifications: {
       enabled: true,
       monthlyBudget: true,
@@ -648,4 +647,3 @@ export function useSupabaseSync() {
     lastSyncTime,
   };
 }
-

@@ -20,7 +20,6 @@ export const storageKeys = {
   BADGES: 'badges',
   SETTINGS: 'settings',
   GAME_STATS: 'gameStats',
-  ONBOARDING_COMPLETED: 'onboardingCompleted',
   BIOMETRIC_ENABLED: 'biometricEnabled',
   LAST_SYNC: 'lastSync',
   CATEGORY_CORRECTIONS: 'categoryCorrections',

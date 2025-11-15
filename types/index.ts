@@ -135,7 +135,6 @@ export interface AppSettings {
   locale: string;
   theme: 'dark' | 'light';
   biometricLockEnabled: boolean;
-  hasCompletedOnboarding: boolean;
   notifications: NotificationSettings;
   privacy: PrivacySettings;
 }
@@ -172,4 +171,3 @@ export interface GameStats {
   longestStreak: number;
   currentStreak: number;
 }
-

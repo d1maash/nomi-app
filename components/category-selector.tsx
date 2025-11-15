@@ -2,8 +2,17 @@ import { MonoIcon } from '@/components/ui/mono-icon';
 import { CATEGORY_ICONS, CATEGORY_LABELS } from '@/constants/categories';
 import { darkTheme } from '@/styles/theme';
 import { TransactionCategory } from '@/types';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { ScrollView, StyleSheet, Text } from 'react-native';
+import Animated, {
+  FadeInUp,
+  Layout,
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { TactilePressable } from '@/components/ui/tactile-pressable';
 
 type CategorySelectorValue = TransactionCategory | 'all';
 
@@ -35,52 +44,114 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.container}
         >
-            {categories.map((category) => {
+            {categories.map((category, index) => {
                 const isAllOption = category === 'all';
                 const isSelected = selected === category;
                 const label = isAllOption ? allLabel : CATEGORY_LABELS[category];
                 const iconName = isAllOption ? 'grid' : CATEGORY_ICONS[category];
 
-                const backgroundColor =
-                    category === 'income' && isSelected
-                        ? darkTheme.colors.accent
-                        : isSelected
-                            ? darkTheme.colors.surfaceLight
-                            : darkTheme.colors.surface;
-                const borderColor = isSelected ? darkTheme.colors.accent : darkTheme.colors.cardBorder;
-                const iconColor =
-                    category === 'income' && isSelected
-                        ? darkTheme.colors.background
-                        : darkTheme.colors.accent;
-
                 return (
-                    <TouchableOpacity
+                    <Animated.View
                         key={category}
-                        style={[styles.item, isSelected && styles.itemSelected]}
-                        onPress={() => onSelect(category)}
-                        activeOpacity={0.7}
+                        entering={FadeInUp.delay(index * 40)}
+                        layout={Layout.springify()}
+                        style={styles.itemWrapper}
                     >
-                        <View
-                            style={[
-                                styles.iconBadge,
-                                {
-                                    backgroundColor,
-                                    borderColor: isSelected ? 'transparent' : borderColor,
-                                },
-                            ]}
-                        >
-                            <MonoIcon name={iconName} size={20} color={iconColor} />
-                        </View>
-                        <Text
-                            style={[styles.label, isSelected && styles.labelSelected]}
-                            numberOfLines={1}
-                        >
-                            {label}
-                        </Text>
-                    </TouchableOpacity>
+                        <CategoryPill
+                            category={category}
+                            iconName={iconName}
+                            isSelected={isSelected}
+                            label={label}
+                            onPress={() => onSelect(category)}
+                        />
+                    </Animated.View>
                 );
             })}
         </ScrollView>
+    );
+};
+
+type CategoryPillProps = {
+    category: CategorySelectorValue;
+    iconName: string;
+    label: string;
+    isSelected: boolean;
+    onPress: () => void;
+};
+
+const CategoryPill: React.FC<CategoryPillProps> = ({
+    category,
+    iconName,
+    label,
+    isSelected,
+    onPress,
+}) => {
+    const focus = useSharedValue(isSelected ? 1 : 0);
+    const isIncome = category === 'income';
+
+    useEffect(() => {
+        focus.value = withTiming(isSelected ? 1 : 0, { duration: 220 });
+    }, [focus, isSelected]);
+
+    const selectedBackground = isIncome
+        ? darkTheme.colors.accent
+        : darkTheme.colors.surfaceLight;
+    const defaultBackground = darkTheme.colors.surface;
+
+    const animatedItemStyle = useAnimatedStyle(() => ({
+        backgroundColor: interpolateColor(focus.value, [0, 1], [defaultBackground, selectedBackground]),
+        borderColor: interpolateColor(
+            focus.value,
+            [0, 1],
+            [darkTheme.colors.cardBorder, darkTheme.colors.accent]
+        ),
+        shadowOpacity: 0.25 * focus.value,
+        shadowRadius: 18 * focus.value,
+        shadowOffset: { width: 0, height: 8 * focus.value },
+        transform: [{ translateY: -3 * focus.value }],
+    }));
+
+    const iconDefaultBackground = darkTheme.colors.surfaceLight;
+    const iconSelectedBackground = isIncome
+        ? darkTheme.colors.accent
+        : darkTheme.colors.surfaceElevated;
+
+    const animatedIconStyle = useAnimatedStyle(() => ({
+        backgroundColor: interpolateColor(
+            focus.value,
+            [0, 1],
+            [iconDefaultBackground, iconSelectedBackground]
+        ),
+        borderColor: interpolateColor(
+            focus.value,
+            [0, 1],
+            [darkTheme.colors.cardBorder, 'transparent']
+        ),
+    }));
+
+    const iconColor = isIncome && isSelected ? darkTheme.colors.background : darkTheme.colors.accent;
+
+    return (
+        <TactilePressable
+            onPress={onPress}
+            activeScale={0.94}
+            style={[styles.item, animatedItemStyle]}
+        >
+            <Animated.View style={[styles.iconBadge, animatedIconStyle]}
+            >
+                <MonoIcon name={iconName} size={20} color={iconColor} />
+            </Animated.View>
+            <Text
+                style={[
+                    styles.label,
+                    isSelected && styles.labelSelected,
+                    isIncome && isSelected && styles.labelInverted,
+                ]}
+                numberOfLines={1}
+            >
+                {label}
+            </Text>
+        </TactilePressable>
     );
 };
 
@@ -89,12 +160,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: darkTheme.spacing.lg,
         paddingVertical: darkTheme.spacing.sm,
     },
+    itemWrapper: {
+        marginRight: darkTheme.spacing.sm,
+    },
     item: {
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: darkTheme.spacing.sm,
         paddingVertical: darkTheme.spacing.xs,
-        marginRight: darkTheme.spacing.sm,
         borderRadius: darkTheme.borderRadius.full,
         backgroundColor: darkTheme.colors.surface,
         width: 88,
@@ -102,9 +175,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: darkTheme.colors.cardBorder,
         gap: 4,
-    },
-    itemSelected: {
-        borderColor: darkTheme.colors.accent,
+        overflow: 'hidden',
     },
     iconBadge: {
         width: 32,
@@ -121,5 +192,8 @@ const styles = StyleSheet.create({
     labelSelected: {
         color: darkTheme.colors.text,
         fontWeight: '600',
+    },
+    labelInverted: {
+        color: darkTheme.colors.background,
     },
 });
