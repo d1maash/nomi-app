@@ -6,13 +6,15 @@ import { MonoIcon } from '@/components/ui/mono-icon';
 import { useTransactions } from '@/hooks/use-supabase';
 import { darkTheme } from '@/styles/theme';
 import { Transaction, TransactionCategory } from '@/types';
-import { formatCurrency, formatDate } from '@/utils/format';
+import { formatCurrency, formatDate, parseDate } from '@/utils/format';
 import { differenceInCalendarMonths, isToday, isYesterday, startOfDay } from 'date-fns';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
+    ActivityIndicator,
     LayoutAnimation,
     Platform,
+    RefreshControl,
     SectionList,
     StyleSheet,
     Text,
@@ -28,12 +30,13 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 export default function TransactionsScreen() {
     const router = useRouter();
-    const { transactions, isLoading } = useTransactions();
+    const { transactions, isLoading, refresh } = useTransactions();
     const { isInitialized } = useSupabase();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState<TransactionCategory | 'all'>('all');
     const [sortDesc, setSortDesc] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
     // Фильтрация и поиск
     const filteredTransactions = useMemo(() => {
@@ -56,7 +59,9 @@ export default function TransactionsScreen() {
         const dateMap = new Map<string, Transaction[]>();
 
         filteredTransactions.forEach((transaction) => {
-            const dateKey = startOfDay(new Date(transaction.date)).toISOString();
+            // Используем parseDate для корректной обработки даты
+            const transactionDate = parseDate(transaction.date);
+            const dateKey = startOfDay(transactionDate).toISOString();
             if (!dateMap.has(dateKey)) {
                 dateMap.set(dateKey, []);
             }
@@ -76,8 +81,9 @@ export default function TransactionsScreen() {
         });
 
         return groups.sort((a, b) => {
-            const dateA = new Date(a.data[0].date).getTime();
-            const dateB = new Date(b.data[0].date).getTime();
+            // Используем parseDate для корректной сортировки
+            const dateA = parseDate(a.data[0].date).getTime();
+            const dateB = parseDate(b.data[0].date).getTime();
             return sortDesc ? dateB - dateA : dateA - dateB;
         });
     }, [filteredTransactions, sortDesc]);
@@ -94,7 +100,7 @@ export default function TransactionsScreen() {
         const currentMonth = new Date();
         const monthlyExpense = filteredTransactions
             .filter(
-                (t) => t.type === 'expense' && differenceInCalendarMonths(currentMonth, new Date(t.date)) === 0
+                (t) => t.type === 'expense' && differenceInCalendarMonths(currentMonth, parseDate(t.date)) === 0
             )
             .reduce((sum, t) => sum + t.amount, 0);
 
@@ -108,6 +114,27 @@ export default function TransactionsScreen() {
     const handleAddTransaction = () => {
         router.push('/add-transaction');
     };
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        try {
+            await refresh();
+        } catch (error) {
+            console.error('Error refreshing transactions:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
+    // Отображаем центральный индикатор загрузки только при первой загрузке
+    if (isLoading && transactions.length === 0) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={darkTheme.colors.accent} />
+                <Text style={styles.loadingText}>Загрузка транзакций...</Text>
+            </View>
+        );
+    }
 
     return (
         <SectionList
@@ -250,6 +277,17 @@ export default function TransactionsScreen() {
             )}
             contentContainerStyle={styles.list}
             stickySectionHeadersEnabled
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={handleRefresh}
+                    tintColor={darkTheme.colors.accent}
+                    colors={[darkTheme.colors.accent]}
+                    progressBackgroundColor={darkTheme.colors.surface}
+                    title="Обновление..."
+                    titleColor={darkTheme.colors.textSecondary}
+                />
+            }
         />
     );
 }
@@ -258,6 +296,18 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: darkTheme.colors.background,
+    },
+    loadingContainer: {
+        flex: 1,
+        backgroundColor: darkTheme.colors.background,
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: darkTheme.spacing.md,
+    },
+    loadingText: {
+        ...darkTheme.typography.body,
+        color: darkTheme.colors.textSecondary,
+        marginTop: darkTheme.spacing.sm,
     },
     pageHeader: {
         padding: darkTheme.spacing.xl,

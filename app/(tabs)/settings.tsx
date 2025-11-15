@@ -149,7 +149,7 @@ export default function SettingsScreen() {
                 onValueChange={handleBiometricToggle}
                 trackColor={{
                   false: darkTheme.colors.surfaceLight,
-                  true: darkTheme.colors.primary,
+                  true: '#34C759',
                 }}
                 thumbColor="#FFFFFF"
               />
@@ -174,7 +174,7 @@ export default function SettingsScreen() {
               onValueChange={(v) => handleNotificationToggle('enabled', v)}
               trackColor={{
                 false: darkTheme.colors.surfaceLight,
-                true: darkTheme.colors.primary,
+                true: '#34C759',
               }}
               thumbColor="#FFFFFF"
             />
@@ -199,7 +199,7 @@ export default function SettingsScreen() {
                   onValueChange={(v) => handleNotificationToggle('monthlyBudget', v)}
                   trackColor={{
                     false: darkTheme.colors.surfaceLight,
-                    true: darkTheme.colors.primary,
+                    true: '#34C759',
                   }}
                   thumbColor="#FFFFFF"
                 />
@@ -219,7 +219,7 @@ export default function SettingsScreen() {
                   onValueChange={(v) => handleNotificationToggle('goalProgress', v)}
                   trackColor={{
                     false: darkTheme.colors.surfaceLight,
-                    true: darkTheme.colors.primary,
+                    true: '#34C759',
                   }}
                   thumbColor="#FFFFFF"
                 />
@@ -242,7 +242,7 @@ export default function SettingsScreen() {
                   }}
                   trackColor={{
                     false: darkTheme.colors.surfaceLight,
-                    true: darkTheme.colors.primary,
+                    true: '#34C759',
                   }}
                   thumbColor="#FFFFFF"
                 />
@@ -272,7 +272,7 @@ export default function SettingsScreen() {
               onValueChange={(v) => handlePrivacyToggle('aiCategorization', v)}
               trackColor={{
                 false: darkTheme.colors.surfaceLight,
-                true: darkTheme.colors.primary,
+                true: '#34C759',
               }}
               thumbColor="#FFFFFF"
             />
@@ -298,7 +298,7 @@ export default function SettingsScreen() {
               }}
               trackColor={{
                 false: darkTheme.colors.surfaceLight,
-                true: darkTheme.colors.primary,
+                true: '#34C759',
               }}
               thumbColor="#FFFFFF"
             />

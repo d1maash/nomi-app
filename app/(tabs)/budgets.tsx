@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { Budget, TransactionCategory } from '@/types';
 import { darkTheme } from '@/styles/theme';
 import { Card } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { CategorySelector } from '@/components/category-selector';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, parseDate } from '@/utils/format';
 import { CATEGORY_LABELS, CATEGORY_ICONS, CATEGORY_COLORS } from '@/constants/categories';
 import { aiService } from '@/services/ai';
 import { addDays } from 'date-fns';
@@ -19,14 +19,15 @@ import { useBudgets, useTransactions } from '@/hooks/use-supabase';
 import { useSupabase } from '@/components/supabase-provider';
 
 export default function BudgetsScreen() {
-  const { budgets, add: addBudget, isLoading: budgetsLoading } = useBudgets();
-  const { transactions, isLoading: transactionsLoading } = useTransactions();
+  const { budgets, add: addBudget, isLoading: budgetsLoading, refresh: refreshBudgets } = useBudgets();
+  const { transactions, isLoading: transactionsLoading, refresh: refreshTransactions } = useTransactions();
   const { userId, isInitialized } = useSupabase();
   
   const [budgetsWithPredictions, setBudgetsWithPredictions] = useState<
     (Budget & { prediction?: any })[]
   >([]);
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [draftBudget, setDraftBudget] = useState<{
     limit: string;
     category: TransactionCategory;
@@ -56,16 +57,18 @@ export default function BudgetsScreen() {
   }, [loadPredictions]);
 
   const calculateSpent = (budget: Budget): number => {
-    const budgetStart = new Date(budget.startDate);
-    const budgetEnd = new Date(budget.endDate);
+    const budgetStart = parseDate(budget.startDate);
+    const budgetEnd = parseDate(budget.endDate);
 
     return transactions
       .filter(
-        (t) =>
-          t.category === budget.category &&
-          t.type === 'expense' &&
-          new Date(t.date) >= budgetStart &&
-          new Date(t.date) <= budgetEnd
+        (t) => {
+          const transactionDate = parseDate(t.date);
+          return t.category === budget.category &&
+            t.type === 'expense' &&
+            transactionDate >= budgetStart &&
+            transactionDate <= budgetEnd;
+        }
       )
       .reduce((sum, t) => sum + t.amount, 0);
   };
@@ -82,6 +85,17 @@ export default function BudgetsScreen() {
       return { variant: 'warning', label: 'Близко к лимиту' };
     }
     return { variant: 'success', label: 'В норме' };
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refreshBudgets(), refreshTransactions()]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleCreateBudget = async () => {
@@ -196,16 +210,42 @@ export default function BudgetsScreen() {
     </Modal>
   );
 
+  // Показываем индикатор загрузки только при первой загрузке
+  if ((budgetsLoading || transactionsLoading) && budgets.length === 0) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={darkTheme.colors.accent} />
+        <Text style={styles.loadingText}>Загрузка бюджетов...</Text>
+      </View>
+    );
+  }
+
   if (budgets.length === 0) {
     return (
       <>
-        <EmptyState
-          iconName="pie-chart"
-          title="Нет бюджетов"
-          message="Создай первый бюджет, чтобы контролировать расходы"
-          actionLabel="Создать бюджет"
-          onAction={() => setCreateModalVisible(true)}
-        />
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.emptyContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={darkTheme.colors.accent}
+              colors={[darkTheme.colors.accent]}
+              progressBackgroundColor={darkTheme.colors.surface}
+              title="Обновление..."
+              titleColor={darkTheme.colors.textSecondary}
+            />
+          }
+        >
+          <EmptyState
+            iconName="pie-chart"
+            title="Нет бюджетов"
+            message="Создай первый бюджет, чтобы контролировать расходы"
+            actionLabel="Создать бюджет"
+            onAction={() => setCreateModalVisible(true)}
+          />
+        </ScrollView>
         {renderBudgetModal()}
       </>
     );
@@ -213,7 +253,21 @@ export default function BudgetsScreen() {
 
   return (
     <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={darkTheme.colors.accent}
+            colors={[darkTheme.colors.accent]}
+            progressBackgroundColor={darkTheme.colors.surface}
+            title="Обновление..."
+            titleColor={darkTheme.colors.textSecondary}
+          />
+        }
+      >
         <Text style={styles.title}>Мои бюджеты</Text>
 
         {budgetsWithPredictions.map((budget) => {
@@ -307,6 +361,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: darkTheme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: darkTheme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: darkTheme.spacing.md,
+  },
+  loadingText: {
+    ...darkTheme.typography.body,
+    color: darkTheme.colors.textSecondary,
+    marginTop: darkTheme.spacing.sm,
+  },
+  emptyContainer: {
+    flex: 1,
   },
   content: {
     padding: darkTheme.spacing.xl,

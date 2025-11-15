@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { darkTheme } from '@/styles/theme';
 import { Card } from '@/components/ui/card';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
-import { formatCurrency, formatDate } from '@/utils/format';
+import { formatCurrency, formatDate, parseDate } from '@/utils/format';
 import { aiService } from '@/services/ai';
 import { triggerHaptic } from '@/utils/haptics';
 import { startOfDay, startOfWeek, endOfWeek } from 'date-fns';
@@ -22,10 +22,10 @@ export default function HomeScreen() {
 
   // Загружаем данные из Supabase
   const { transactions, isLoading: transactionsLoading, refresh: refreshTransactions } = useTransactions();
-  const { budgets, isLoading: budgetsLoading } = useBudgets();
-  const { goals, isLoading: goalsLoading } = useGoals();
-  const { challenges, isLoading: challengesLoading } = useChallenges();
-  const { insights, isLoading: insightsLoading } = useInsights();
+  const { budgets, isLoading: budgetsLoading, refresh: refreshBudgets } = useBudgets();
+  const { goals, isLoading: goalsLoading, refresh: refreshGoals } = useGoals();
+  const { challenges, isLoading: challengesLoading, refresh: refreshChallenges } = useChallenges();
+  const { insights, isLoading: insightsLoading, refresh: refreshInsights } = useInsights();
   const { isInitialized } = useSupabase();
 
   // Вычисления
@@ -34,7 +34,7 @@ export default function HomeScreen() {
   const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
 
   const todayTransactions = transactions.filter(
-    (t) => new Date(t.date) >= todayStart
+    (t) => parseDate(t.date) >= todayStart
   );
 
   const todayExpenses = todayTransactions
@@ -43,10 +43,12 @@ export default function HomeScreen() {
 
   const weekExpenses = transactions
     .filter(
-      (t) =>
-        t.type === 'expense' &&
-        new Date(t.date) >= weekStart &&
-        new Date(t.date) <= weekEnd
+      (t) => {
+        const transactionDate = parseDate(t.date);
+        return t.type === 'expense' &&
+          transactionDate >= weekStart &&
+          transactionDate <= weekEnd;
+      }
     )
     .reduce((sum, t) => sum + t.amount, 0);
 
@@ -71,12 +73,22 @@ export default function HomeScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     triggerHaptic.light();
-    // Обновляем данные из Supabase
-    await Promise.all([
-      refreshTransactions(),
-      loadInsight(),
-    ]);
-    setRefreshing(false);
+    try {
+      // Обновляем все данные из Supabase
+      await Promise.all([
+        refreshTransactions(),
+        refreshBudgets(),
+        refreshGoals(),
+        refreshChallenges(),
+        refreshInsights(),
+      ]);
+      // Затем регенерируем инсайт на основе свежих данных
+      await loadInsight();
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleAddTransaction = () => {
@@ -84,10 +96,37 @@ export default function HomeScreen() {
     router.push('/add-transaction');
   };
 
+  // Показываем индикатор загрузки только при первой загрузке
+  const isInitialLoading = (transactionsLoading || budgetsLoading || goalsLoading || challengesLoading) && 
+    transactions.length === 0 && budgets.length === 0 && goals.length === 0 && challenges.length === 0;
+
+  if (isInitialLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={darkTheme.colors.accent} />
+        <Text style={styles.loadingText}>Загрузка данных...</Text>
+      </View>
+    );
+  }
+
   // Показываем пустое состояние только если данные загружены и транзакций нет
   if (!transactionsLoading && transactions.length === 0) {
     return (
-      <View style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.emptyContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={darkTheme.colors.accent}
+            colors={[darkTheme.colors.accent]}
+            progressBackgroundColor={darkTheme.colors.surface}
+            title="Обновление..."
+            titleColor={darkTheme.colors.textSecondary}
+          />
+        }
+      >
         <EmptyState
           iconName="pocket"
           title="Начни отслеживать траты"
@@ -95,7 +134,7 @@ export default function HomeScreen() {
           actionLabel="Добавить транзакцию"
           onAction={handleAddTransaction}
         />
-      </View>
+      </ScrollView>
     );
   }
 
@@ -104,7 +143,15 @@ export default function HomeScreen() {
       style={styles.container}
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={darkTheme.colors.text} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={darkTheme.colors.accent}
+          colors={[darkTheme.colors.accent]}
+          progressBackgroundColor={darkTheme.colors.surface}
+          title="Обновление..."
+          titleColor={darkTheme.colors.textSecondary}
+        />
       }
     >
       {/* Заголовок */}
@@ -252,6 +299,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: darkTheme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: darkTheme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: darkTheme.spacing.md,
+  },
+  loadingText: {
+    ...darkTheme.typography.body,
+    color: darkTheme.colors.textSecondary,
+    marginTop: darkTheme.spacing.sm,
+  },
+  emptyContainer: {
+    flex: 1,
   },
   content: {
     padding: darkTheme.spacing.xl,

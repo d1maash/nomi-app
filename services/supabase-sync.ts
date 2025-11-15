@@ -11,6 +11,7 @@ import {
     GameStats,
     AppSettings,
 } from '@/types';
+import { formatDateForDB } from '@/utils/format';
 
 // Хелпер для получения user_id по clerk_id
 export async function getUserId(clerkId: string): Promise<string | null> {
@@ -93,12 +94,12 @@ export async function createTransaction(
             amount: transaction.amount,
             category: transaction.category,
             description: transaction.description,
-            date: transaction.date.toISOString(),
+            date: formatDateForDB(transaction.date),
             type: transaction.type,
             ai_suggested: transaction.aiSuggested,
             tags: transaction.tags || [],
             recurring_frequency: transaction.recurring?.frequency,
-            recurring_next_date: transaction.recurring?.nextDate.toISOString(),
+            recurring_next_date: transaction.recurring?.nextDate ? formatDateForDB(transaction.recurring.nextDate) : null,
         })
         .select()
         .single();
@@ -123,14 +124,14 @@ export async function updateTransaction(
     if (updates.category !== undefined) updateData.category = updates.category;
     if (updates.description !== undefined)
         updateData.description = updates.description;
-    if (updates.date !== undefined) updateData.date = updates.date.toISOString();
+    if (updates.date !== undefined) updateData.date = formatDateForDB(updates.date);
     if (updates.type !== undefined) updateData.type = updates.type;
     if (updates.aiSuggested !== undefined)
         updateData.ai_suggested = updates.aiSuggested;
     if (updates.tags !== undefined) updateData.tags = updates.tags;
     if (updates.recurring !== undefined) {
         updateData.recurring_frequency = updates.recurring.frequency;
-        updateData.recurring_next_date = updates.recurring.nextDate.toISOString();
+        updateData.recurring_next_date = formatDateForDB(updates.recurring.nextDate);
     }
 
     const { data, error } = await supabase
@@ -199,8 +200,8 @@ export async function createBudget(
             category: budget.category,
             limit_amount: budget.limit,
             period: budget.period,
-            start_date: budget.startDate.toISOString(),
-            end_date: budget.endDate.toISOString(),
+            start_date: formatDateForDB(budget.startDate),
+            end_date: formatDateForDB(budget.endDate),
             ai_predicted_spend: budget.aiPrediction?.predictedSpend,
             ai_confidence: budget.aiPrediction?.confidence,
             ai_recommendation: budget.aiPrediction?.recommendation,
@@ -226,9 +227,9 @@ export async function updateBudget(id: string, updates: Partial<Budget>) {
     if (updates.spent !== undefined) updateData.spent = updates.spent;
     if (updates.period !== undefined) updateData.period = updates.period;
     if (updates.startDate !== undefined)
-        updateData.start_date = updates.startDate.toISOString();
+        updateData.start_date = formatDateForDB(updates.startDate);
     if (updates.endDate !== undefined)
-        updateData.end_date = updates.endDate.toISOString();
+        updateData.end_date = formatDateForDB(updates.endDate);
     if (updates.aiPrediction !== undefined) {
         updateData.ai_predicted_spend = updates.aiPrediction.predictedSpend;
         updateData.ai_confidence = updates.aiPrediction.confidence;
@@ -303,9 +304,9 @@ export async function createGoal(
             name: goal.name,
             target_amount: goal.targetAmount,
             current_amount: goal.currentAmount,
-            deadline: goal.deadline.toISOString(),
+            deadline: formatDateForDB(goal.deadline),
             category: goal.category,
-            ai_estimated_date: goal.aiETA?.estimatedDate.toISOString(),
+            ai_estimated_date: goal.aiETA?.estimatedDate ? formatDateForDB(goal.aiETA.estimatedDate) : null,
             ai_recommended_weekly_saving: goal.aiETA?.recommendedWeeklySaving,
             ai_risk_level: goal.aiETA?.riskLevel,
             ai_note: goal.aiETA?.note,
@@ -332,10 +333,10 @@ export async function updateGoal(id: string, updates: Partial<Goal>) {
     if (updates.currentAmount !== undefined)
         updateData.current_amount = updates.currentAmount;
     if (updates.deadline !== undefined)
-        updateData.deadline = updates.deadline.toISOString();
+        updateData.deadline = formatDateForDB(updates.deadline);
     if (updates.category !== undefined) updateData.category = updates.category;
     if (updates.aiETA !== undefined) {
-        updateData.ai_estimated_date = updates.aiETA.estimatedDate.toISOString();
+        updateData.ai_estimated_date = formatDateForDB(updates.aiETA.estimatedDate);
         updateData.ai_recommended_weekly_saving =
             updates.aiETA.recommendedWeeklySaving;
         updateData.ai_risk_level = updates.aiETA.riskLevel;
@@ -609,7 +610,7 @@ export async function createAnomalyAlert(
             severity: alert.severity,
             message: alert.message,
             suggestion: alert.suggestion,
-            date: alert.date.toISOString(),
+            date: formatDateForDB(alert.date),
         })
         .select()
         .single();
