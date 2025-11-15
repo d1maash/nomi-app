@@ -13,19 +13,23 @@ export interface Database {
       users: {
         Row: {
           id: string;
-          clerk_id: string;
           email: string;
-          name: string | null;
+          username: string | null;
+          first_name: string | null;
+          last_name: string | null;
+          avatar_url: string | null;
           currency: string | null;
           locale: string | null;
           created_at: string | null;
           updated_at: string | null;
         };
         Insert: {
-          id?: string;
-          clerk_id: string;
+          id: string;
           email: string;
-          name?: string | null;
+          username?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
+          avatar_url?: string | null;
           currency?: string | null;
           locale?: string | null;
           created_at?: string | null;
@@ -33,9 +37,11 @@ export interface Database {
         };
         Update: {
           id?: string;
-          clerk_id?: string;
           email?: string;
-          name?: string | null;
+          username?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
+          avatar_url?: string | null;
           currency?: string | null;
           locale?: string | null;
           created_at?: string | null;
@@ -367,6 +373,7 @@ export interface Database {
           ai_coaching: boolean | null;
           anonymous_comparison: boolean | null;
           data_export_enabled: boolean | null;
+          has_completed_onboarding: boolean | null;
           created_at: string | null;
           updated_at: string | null;
         };
@@ -386,6 +393,7 @@ export interface Database {
           ai_coaching?: boolean | null;
           anonymous_comparison?: boolean | null;
           data_export_enabled?: boolean | null;
+          has_completed_onboarding?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -405,6 +413,7 @@ export interface Database {
           ai_coaching?: boolean | null;
           anonymous_comparison?: boolean | null;
           data_export_enabled?: boolean | null;
+          has_completed_onboarding?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
         };

@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
-import { ClerkProvider } from '@clerk/clerk-expo';
 import * as SplashScreen from 'expo-splash-screen';
-import { CLERK_CONFIG, clerkTokenCache } from '@/lib/clerk';
 import { biometricService } from '@/services/biometric';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { darkTheme } from '@/styles/theme';
@@ -49,9 +47,6 @@ export default function RootLayout() {
     );
   }
 
-  // Проверяем наличие Clerk ключа
-  const hasClerkKey = CLERK_CONFIG.publishableKey && CLERK_CONFIG.publishableKey.length > 0;
-
   const AppStack = () => (
     <Stack
       screenOptions={{
@@ -62,6 +57,12 @@ export default function RootLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="auth" />
+      <Stack.Screen 
+        name="auth/callback" 
+        options={{
+          headerShown: false,
+        }}
+      />
       <Stack.Screen
         name="transaction/[id]"
         options={{
@@ -87,18 +88,9 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      {hasClerkKey ? (
-        <ClerkProvider
-          publishableKey={CLERK_CONFIG.publishableKey}
-          tokenCache={clerkTokenCache}
-        >
-          <SupabaseProvider>
-            <AppStack />
-          </SupabaseProvider>
-        </ClerkProvider>
-      ) : (
+      <SupabaseProvider>
         <AppStack />
-      )}
+      </SupabaseProvider>
     </GestureHandlerRootView>
   );
 }

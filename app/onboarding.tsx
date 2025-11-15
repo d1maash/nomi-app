@@ -10,6 +10,7 @@ import { MonoIcon } from '@/components/ui/mono-icon';
 import type { MonoIconName } from '@/types/icon';
 import { useSettings } from '@/hooks/use-supabase';
 import { useSupabase } from '@/components/supabase-provider';
+import { useStore } from '@/store';
 
 const { width } = Dimensions.get('window');
 
@@ -45,6 +46,7 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { update: updateSettings } = useSettings();
   const { isInitialized } = useSupabase();
+  const completeOnboarding = useStore((state) => state.completeOnboarding);
 
   const handleNext = () => {
     triggerHaptic.light();
@@ -70,7 +72,8 @@ export default function OnboardingScreen() {
     // Запрашиваем разрешение на уведомления
     await notificationService.requestPermissions();
 
-    // Отмечаем онбординг как пройденный
+    // Отмечаем онбординг как пройденный (локально и в Supabase, если доступен)
+    completeOnboarding();
     if (isInitialized) {
       await updateSettings({ hasCompletedOnboarding: true });
     }
@@ -178,4 +181,3 @@ const styles = StyleSheet.create({
     marginTop: darkTheme.spacing.sm,
   },
 });
-

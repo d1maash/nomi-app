@@ -1,34 +1,32 @@
 import { Tabs, Redirect } from 'expo-router';
-import { useUser, useAuth } from '@clerk/clerk-expo';
 import { darkTheme } from '@/styles/theme';
 import { MonoIcon } from '@/components/ui/mono-icon';
 import type { MonoIconName } from '@/types/icon';
 import { useSettings } from '@/hooks/use-supabase';
+import { useAuth } from '@/hooks/use-auth';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { useStore } from '@/store';
 
 export default function TabsLayout() {
-  const user = useUser();
-  const { isSignedIn: authIsSignedIn, isLoaded: authIsLoaded } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { settings } = useSettings();
-  const onboardingCompleted = settings.hasCompletedOnboarding;
+  const localOnboardingCompleted = useStore((state) => state.onboardingCompleted);
+  const onboardingCompleted = supabaseConfigured
+    ? (settings?.hasCompletedOnboarding ?? localOnboardingCompleted)
+    : localOnboardingCompleted;
+  const supabaseConfigured = isSupabaseConfigured();
 
-  // Проверяем, настроен ли Clerk
-  const clerkConfigured = Boolean(process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  // Состояние загрузки
+  const isLoaded = !authLoading;
   
-  // Clerk может быть не настроен - проверяем
-  const isLoaded = user?.isLoaded ?? authIsLoaded ?? true;
-  
-  // Используем useAuth для более надежной проверки состояния входа
-  // Если Clerk настроен, используем его состояние, иначе разрешаем доступ
-  const isSignedIn = clerkConfigured 
-    ? (authIsSignedIn ?? user?.isSignedIn ?? false) 
-    : true;
+  // Пользователь залогинен, если есть user
+  const isSignedIn = Boolean(user);
 
   console.log('[TabsLayout] State:', {
     isLoaded,
     isSignedIn,
-    authIsSignedIn,
-    userIsSignedIn: user?.isSignedIn,
-    clerkConfigured,
+    userId: user?.id,
+    supabaseConfigured,
     onboardingCompleted
   });
 
@@ -38,8 +36,8 @@ export default function TabsLayout() {
     return <Redirect href="/onboarding" />;
   }
 
-  // Перенаправляем на авторизацию, если не залогинен (только если Clerk настроен)
-  if (isLoaded && !isSignedIn && clerkConfigured) {
+  // Перенаправляем на авторизацию, если не залогинен (только если Supabase настроен)
+  if (isLoaded && !isSignedIn && supabaseConfigured) {
     console.log('[TabsLayout] User not signed in, redirecting to /auth');
     return <Redirect href="/auth" />;
   }

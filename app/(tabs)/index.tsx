@@ -1,5 +1,18 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+  TouchableOpacity,
+  ActivityIndicator,
+  Image,
+  Modal,
+  TextInput,
+  Pressable,
+  Alert,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { darkTheme } from '@/styles/theme';
 import { Card } from '@/components/ui/card';
@@ -14,11 +27,22 @@ import { startOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { MonoIcon } from '@/components/ui/mono-icon';
 import { useTransactions, useBudgets, useGoals, useChallenges, useInsights } from '@/hooks/use-supabase';
 import { useSupabase } from '@/components/supabase-provider';
+import { useAuth } from '@/hooks/use-auth';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 export default function HomeScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [todayInsight, setTodayInsight] = useState<string>('');
+  const { user, profile, loading: authLoading, updateProfile } = useAuth();
+  const supabaseConfigured = isSupabaseConfigured();
+  const [isProfileModalVisible, setProfileModalVisible] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    firstName: '',
+    lastName: '',
+    username: '',
+  });
+  const [profileSaving, setProfileSaving] = useState(false);
 
   // Загружаем данные из Supabase
   const { transactions, isLoading: transactionsLoading, refresh: refreshTransactions } = useTransactions();
@@ -56,6 +80,14 @@ export default function HomeScreen() {
   const activeChallenge = challenges.find((c) => !c.completed);
   const latestInsight = insights.find((i) => !i.read);
   const recentTransactions = transactions.slice(0, 5);
+  const greetingText = profile?.first_name ? `Привет, ${profile.first_name}!` : 'Привет!';
+  const userInitials = useMemo(() => {
+    if (!profile) return 'Г';
+    const first = profile.first_name?.[0];
+    const last = profile.last_name?.[0];
+    const usernameLetter = profile.username?.[0];
+    return (first ?? last ?? usernameLetter ?? '👤').toString().toUpperCase();
+  }, [profile]);
 
   const loadInsight = useCallback(async () => {
     if (transactions.length > 0) {
@@ -96,25 +128,218 @@ export default function HomeScreen() {
     router.push('/add-transaction');
   };
 
+  const handleAccountPress = () => {
+    triggerHaptic.light();
+    if (!supabaseConfigured) {
+      Alert.alert(
+        'Supabase не настроен',
+        'Добавь EXPO_PUBLIC_SUPABASE_URL и EXPO_PUBLIC_SUPABASE_ANON_KEY в .env'
+      );
+      return;
+    }
+
+    if (!user) {
+      router.push('/auth');
+      return;
+    }
+
+    setProfileForm({
+      firstName: profile?.first_name ?? '',
+      lastName: profile?.last_name ?? '',
+      username: profile?.username ?? '',
+    });
+    setProfileModalVisible(true);
+  };
+
+  const closeProfileModal = () => {
+    if (profileSaving) {
+      return;
+    }
+    setProfileModalVisible(false);
+  };
+
+  const handleProfileSave = async () => {
+    if (!user || profileSaving) return;
+
+    const trimmedFirstName = profileForm.firstName.trim();
+    const trimmedLastName = profileForm.lastName.trim();
+    const trimmedUsername = profileForm.username.trim();
+
+    // Проверяем, что хотя бы одно поле изменилось
+    const firstNameChanged = trimmedFirstName !== (profile?.first_name ?? '');
+    const lastNameChanged = trimmedLastName !== (profile?.last_name ?? '');
+    const usernameChanged = trimmedUsername && trimmedUsername !== (profile?.username ?? '');
+
+    if (!firstNameChanged && !lastNameChanged && !usernameChanged) {
+      Alert.alert('Изменений нет', 'Обнови хотя бы одно поле, прежде чем сохранять.');
+      return;
+    }
+
+    try {
+      setProfileSaving(true);
+
+      const updates: any = {};
+      if (firstNameChanged) updates.first_name = trimmedFirstName || null;
+      if (lastNameChanged) updates.last_name = trimmedLastName || null;
+      if (usernameChanged) updates.username = trimmedUsername || null;
+
+      const { error } = await updateProfile(updates);
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        Alert.alert('Ошибка', error.message || 'Не удалось обновить профиль');
+        return;
+      }
+
+      triggerHaptic.success();
+      Alert.alert('Успех', 'Профиль успешно обновлен!');
+      setProfileModalVisible(false);
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Ошибка', 'Не удалось обновить профиль');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const renderProfileModal = () => {
+    if (!isProfileModalVisible) {
+      return null;
+    }
+
+    return (
+      <Modal
+        visible={isProfileModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeProfileModal}
+      >
+        <Pressable style={styles.profileModalBackdrop} onPress={closeProfileModal}>
+          <Pressable
+            style={styles.profileModalCard}
+            onPress={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <View style={styles.profileModalHeader}>
+              <Text style={styles.profileModalTitle}>Профиль</Text>
+              <Text style={styles.profileModalSubtitle}>
+                Обнови никнейм, имя и фамилию. Изменения сохранятся в Clerk.
+              </Text>
+            </View>
+
+            <View style={styles.profileFieldGroup}>
+              <Text style={styles.profileFieldLabel}>Имя</Text>
+              <TextInput
+                value={profileForm.firstName}
+                onChangeText={(text) =>
+                  setProfileForm((prev) => ({ ...prev, firstName: text }))
+                }
+                placeholder="Например, Айгерим"
+                placeholderTextColor={darkTheme.colors.textTertiary}
+                style={styles.profileInput}
+              />
+            </View>
+
+            <View style={styles.profileFieldGroup}>
+              <Text style={styles.profileFieldLabel}>Фамилия</Text>
+              <TextInput
+                value={profileForm.lastName}
+                onChangeText={(text) =>
+                  setProfileForm((prev) => ({ ...prev, lastName: text }))
+                }
+                placeholder="Фамилия"
+                placeholderTextColor={darkTheme.colors.textTertiary}
+                style={styles.profileInput}
+              />
+            </View>
+
+            <View style={styles.profileFieldGroup}>
+              <Text style={styles.profileFieldLabel}>Никнейм</Text>
+              <TextInput
+                value={profileForm.username}
+                onChangeText={(text) =>
+                  setProfileForm((prev) => ({ ...prev, username: text }))
+                }
+                autoCapitalize="none"
+                placeholder="Например, nomi_user"
+                placeholderTextColor={darkTheme.colors.textTertiary}
+                style={styles.profileInput}
+              />
+            </View>
+
+            <View style={styles.profileModalActions}>
+              <Button
+                title="Отмена"
+                variant="ghost"
+                onPress={closeProfileModal}
+                disabled={profileSaving}
+              />
+              <Button
+                title="Сохранить"
+                onPress={handleProfileSave}
+                loading={profileSaving}
+              />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    );
+  };
+
   // Показываем индикатор загрузки только при первой загрузке
   const isInitialLoading = (transactionsLoading || budgetsLoading || goalsLoading || challengesLoading) && 
     transactions.length === 0 && budgets.length === 0 && goals.length === 0 && challenges.length === 0;
 
   if (isInitialLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={darkTheme.colors.accent} />
-        <Text style={styles.loadingText}>Загрузка данных...</Text>
-      </View>
+      <>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={darkTheme.colors.accent} />
+          <Text style={styles.loadingText}>Загрузка данных...</Text>
+        </View>
+        {renderProfileModal()}
+      </>
     );
   }
 
   // Показываем пустое состояние только если данные загружены и транзакций нет
   if (!transactionsLoading && transactions.length === 0) {
     return (
+      <>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.emptyContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={darkTheme.colors.accent}
+              colors={[darkTheme.colors.accent]}
+              progressBackgroundColor={darkTheme.colors.surface}
+              title="Обновление..."
+              titleColor={darkTheme.colors.textSecondary}
+            />
+          }
+        >
+          <EmptyState
+            iconName="pocket"
+            title="Начни отслеживать траты"
+            message="Добавь свою первую транзакцию, чтобы увидеть аналитику и AI-инсайты"
+            actionLabel="Добавить транзакцию"
+            onAction={handleAddTransaction}
+          />
+        </ScrollView>
+        {renderProfileModal()}
+      </>
+    );
+  }
+
+  return (
+    <>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.emptyContainer}
+        contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -127,43 +352,39 @@ export default function HomeScreen() {
           />
         }
       >
-        <EmptyState
-          iconName="pocket"
-          title="Начни отслеживать траты"
-          message="Добавь свою первую транзакцию, чтобы увидеть аналитику и AI-инсайты"
-          actionLabel="Добавить транзакцию"
-          onAction={handleAddTransaction}
-        />
-      </ScrollView>
-    );
-  }
-
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={darkTheme.colors.accent}
-          colors={[darkTheme.colors.accent]}
-          progressBackgroundColor={darkTheme.colors.surface}
-          title="Обновление..."
-          titleColor={darkTheme.colors.textSecondary}
-        />
-      }
-    >
-      {/* Заголовок */}
-      <View style={styles.header}>
-        <View style={styles.greetingRow}>
-          <Text style={styles.greeting}>Привет!</Text>
-          <View style={styles.greetingIcon}>
-            <MonoIcon name="smile" size={18} color={darkTheme.colors.text} />
+        {/* Заголовок */}
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <View style={styles.headerTextContainer}>
+              <View style={styles.greetingRow}>
+                <Text style={styles.greeting}>{greetingText}</Text>
+                <View style={styles.greetingIcon}>
+                  <MonoIcon name="smile" size={18} color={darkTheme.colors.text} />
+                </View>
+              </View>
+              <Text style={styles.date}>{formatDate(new Date(), 'EEEE, d MMMM')}</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.accountButton}
+              onPress={handleAccountPress}
+              activeOpacity={0.8}
+            >
+              {supabaseConfigured ? (
+                <>
+                  {authLoading ? (
+                    <ActivityIndicator color={darkTheme.colors.text} />
+                  ) : profile?.avatar_url ? (
+                    <Image source={{ uri: profile.avatar_url }} style={styles.accountImage} />
+                  ) : (
+                    <Text style={styles.accountInitials}>{userInitials}</Text>
+                  )}
+                </>
+              ) : (
+                <MonoIcon name="user" size={20} color={darkTheme.colors.text} />
+              )}
+            </TouchableOpacity>
           </View>
         </View>
-        <Text style={styles.date}>{formatDate(new Date(), 'EEEE, d MMMM')}</Text>
-      </View>
 
       {/* Сегодняшние траты */}
       <Card style={[styles.card, styles.heroCard]} variant="elevated">
@@ -291,7 +512,9 @@ export default function HomeScreen() {
           </Card>
         ))}
       </View>
-    </ScrollView>
+      </ScrollView>
+      {renderProfileModal()}
+    </>
   );
 }
 
@@ -323,6 +546,14 @@ const styles = StyleSheet.create({
     marginBottom: darkTheme.spacing.xl,
     gap: darkTheme.spacing.xs,
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTheme.spacing.md,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
   greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -345,6 +576,26 @@ const styles = StyleSheet.create({
   date: {
     ...darkTheme.typography.body,
     color: darkTheme.colors.textSecondary,
+  },
+  accountButton: {
+    width: 48,
+    height: 48,
+    borderRadius: darkTheme.borderRadius.full,
+    borderWidth: 1,
+    borderColor: darkTheme.colors.cardBorder,
+    backgroundColor: darkTheme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accountImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: darkTheme.borderRadius.full,
+  },
+  accountInitials: {
+    ...darkTheme.typography.body,
+    color: darkTheme.colors.text,
+    fontWeight: '600',
   },
   card: {
     marginBottom: darkTheme.spacing.lg,
@@ -471,5 +722,57 @@ const styles = StyleSheet.create({
   },
   transactionAmountIncome: {
     color: darkTheme.colors.success,
+  },
+  profileModalBackdrop: {
+    flex: 1,
+    backgroundColor: '#00000088',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: darkTheme.spacing.xl,
+  },
+  profileModalCard: {
+    width: '100%',
+    backgroundColor: darkTheme.colors.surface,
+    borderRadius: darkTheme.borderRadius.xl,
+    padding: darkTheme.spacing.xl,
+    borderWidth: 1,
+    borderColor: darkTheme.colors.cardBorder,
+    gap: darkTheme.spacing.md,
+  },
+  profileModalHeader: {
+    gap: darkTheme.spacing.xs,
+  },
+  profileModalTitle: {
+    ...darkTheme.typography.h3,
+    color: darkTheme.colors.text,
+  },
+  profileModalSubtitle: {
+    ...darkTheme.typography.bodySmall,
+    color: darkTheme.colors.textSecondary,
+  },
+  profileFieldGroup: {
+    gap: darkTheme.spacing.xs,
+  },
+  profileFieldLabel: {
+    ...darkTheme.typography.caption,
+    color: darkTheme.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  profileInput: {
+    ...darkTheme.typography.body,
+    borderWidth: 1,
+    borderColor: darkTheme.colors.cardBorder,
+    borderRadius: darkTheme.borderRadius.lg,
+    paddingHorizontal: darkTheme.spacing.md,
+    paddingVertical: darkTheme.spacing.sm,
+    backgroundColor: darkTheme.colors.backgroundSoft,
+    color: darkTheme.colors.text,
+  },
+  profileModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: darkTheme.spacing.sm,
   },
 });

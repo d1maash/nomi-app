@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '@clerk/clerk-expo';
+import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 import { useSupabase as useSupabaseContext } from '@/components/supabase-provider';
 import {
@@ -41,7 +41,7 @@ import { Transaction, Budget, Goal, AIInsight, Challenge, Badge, AnomalyAlert, A
  * Хук для работы с данными пользователя в Supabase
  */
 export function useSupabaseData() {
-  const { userId: clerkUserId } = useAuth();
+  const { user } = useAuth();
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -49,28 +49,17 @@ export function useSupabaseData() {
   // Инициализация пользователя и получение user_id
   useEffect(() => {
     async function initUser() {
-      if (!clerkUserId) {
+      if (!user) {
         setIsLoading(false);
+        setUserId(null);
         return;
       }
 
       try {
         setIsLoading(true);
         
-        // Получаем или создаем пользователя в Supabase
-        let dbUserId = await getUserId(clerkUserId);
-        
-        if (!dbUserId) {
-          // Если пользователя нет, создаем его
-          const newUser = await upsertUser(
-            clerkUserId,
-            'user@example.com', // TODO: получить email из Clerk
-            undefined
-          );
-          dbUserId = newUser.id;
-        }
-
-        setUserId(dbUserId);
+        // Используем ID из Supabase Auth напрямую
+        setUserId(user.id);
       } catch (err) {
         console.error('Error initializing user:', err);
         setError(err as Error);
@@ -80,7 +69,7 @@ export function useSupabaseData() {
     }
 
     initUser();
-  }, [clerkUserId]);
+  }, [user]);
 
   return {
     userId,
