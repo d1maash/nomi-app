@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useAuth, useUser } from '@clerk/clerk-expo';
-import { supabase, createSupabaseClientWithClerkToken } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { syncAllData } from '@/services/supabase-sync';
 import { useStore } from '@/store';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient, User } from '@supabase/supabase-js';
 import { Database } from '@/types/database';
 
 interface SupabaseContextType {
@@ -13,6 +12,7 @@ interface SupabaseContextType {
   syncData: () => Promise<void>;
   userId: string | null;
   supabaseClient: SupabaseClient<Database>;
+  user: User | null;
 }
 
 const SupabaseContext = createContext<SupabaseContextType>({
@@ -22,6 +22,7 @@ const SupabaseContext = createContext<SupabaseContextType>({
   syncData: async () => {},
   userId: null,
   supabaseClient: supabase,
+  user: null,
 });
 
 export const useSupabase = () => useContext(SupabaseContext);
@@ -31,133 +32,72 @@ export const useSupabase = () => useContext(SupabaseContext);
  * Автоматически синхронизирует данные при входе пользователя
  */
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
-  const { userId: clerkUserId, getToken } = useAuth();
-  const { user: clerkUser } = useUser();
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [supabaseClient, setSupabaseClient] = useState<SupabaseClient<Database>>(supabase);
+  const [user, setUser] = useState<User | null>(null);
 
   // Store actions
   const store = useStore();
 
   // Инициализация при входе пользователя
   useEffect(() => {
-    if (clerkUserId) {
-      initializeSupabase();
-    } else {
-      setIsInitialized(false);
-      setUserId(null);
-    }
-  }, [clerkUserId]);
+    let mounted = true;
 
-  async function initializeSupabase() {
-    try {
-      if (!clerkUserId) {
-        console.log('❌ No Clerk User ID - user not logged in');
-        return;
-      }
-
-      console.log('🔐 Initializing Supabase for Clerk User:', clerkUserId);
-
-      // Временно: используем дефолтный клиент без JWT токена
-      // TODO: Настроить JWT template в Clerk и раскомментировать код ниже
-      let token: string | null = null;
-      
-      try {
-        // Пытаемся получить JWT токен от Clerk (может не работать, если template не создан)
-        token = await getToken({ template: 'supabase' });
-        if (token) {
-          console.log('✅ Clerk JWT token obtained');
-          const clientWithToken = createSupabaseClientWithClerkToken(token);
-          setSupabaseClient(clientWithToken);
-        }
-      } catch (error: any) {
-        // JWT template не создан - это ок для первого запуска
-        console.warn('⚠️ JWT template "supabase" not found in Clerk. Using default client.');
-        console.warn('⚠️ Create JWT template in Clerk Dashboard: https://dashboard.clerk.com');
-      }
-
-      // Для проверки существования пользователя используем дефолтный клиент
-      // (чтобы избежать проблем с RLS при первом входе)
-      console.log('🔍 Checking if user exists in Supabase...');
-      const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('clerk_id', clerkUserId)
-        .single();
-
-      if (checkError && checkError.code !== 'PGRST116') {
-        // PGRST116 = not found, это норма для нового пользователя
-        console.error('❌ Error checking user:', checkError);
-      }
-
-      let dbUserId = existingUser?.id;
-
-      if (!dbUserId) {
-        // Создаем нового пользователя используя дефолтный клиент
-        // (это обходит RLS политики, что нужно для первого создания)
-        console.log('🆕 User not found. Creating new user in Supabase...');
-        console.log('📝 Clerk ID:', clerkUserId);
-        
-        // Получаем email и имя из Clerk
-        const userEmail = clerkUser?.primaryEmailAddress?.emailAddress || 
-                         clerkUser?.emailAddresses?.[0]?.emailAddress || 
-                         'user@example.com';
-        
-        const userName = clerkUser?.fullName || 
-                        clerkUser?.firstName || 
-                        clerkUser?.username || 
-                        null;
-        
-        console.log('📧 User Email:', userEmail);
-        console.log('👤 User Name:', userName);
-        
-        const { data: newUser, error } = await supabase
-          .from('users')
-          .insert({
-            clerk_id: clerkUserId,
-            email: userEmail,
-            name: userName,
-            currency: 'KZT',
-            locale: 'ru-RU',
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('❌ Error creating user:', error);
-          console.error('❌ Error details:', JSON.stringify(error, null, 2));
-          throw error;
-        }
-        
-        dbUserId = newUser.id;
-        console.log('✅ User created successfully!');
-        console.log('✅ User ID:', dbUserId);
-
-        // Создаем дефолтные настройки (используем дефолтный клиент)
-        await supabase.from('user_settings').insert({
-          user_id: dbUserId,
-        });
-
-        // Создаем дефолтную игровую статистику (используем дефолтный клиент)
-        await supabase.from('game_stats').insert({
-          user_id: dbUserId,
-          total_points: 0,
-          level: 1,
-          longest_streak: 0,
-          current_streak: 0,
-        });
+    // Получаем текущего пользователя
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted && session?.user) {
+        setUser(session.user);
+        setUserId(session.user.id);
+        initializeSupabase(session.user.id);
       } else {
-        console.log('✅ User already exists:', dbUserId);
+        setIsInitialized(true); // Даже без пользователя считаем инициализированным
       }
+    });
 
-      setUserId(dbUserId);
+    // Подписываемся на изменения аутентификации
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (mounted) {
+        if (session?.user) {
+          setUser(session.user);
+          setUserId(session.user.id);
+          await initializeSupabase(session.user.id);
+        } else {
+          setUser(null);
+          setUserId(null);
+          setIsInitialized(false);
+          // Очищаем store при выходе
+          store.transactions = [];
+          store.budgets = [];
+          store.goals = [];
+          store.insights = [];
+          store.challenges = [];
+          store.badges = [];
+          store.anomalyAlerts = [];
+          store.gameStats = null;
+          store.settings = null;
+        }
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function initializeSupabase(authUserId: string) {
+    try {
+      console.log('🔐 Initializing Supabase for User:', authUserId);
+
+      setUserId(authUserId);
       setIsInitialized(true);
 
       // Автоматическая синхронизация при входе
-      await syncData(dbUserId);
+      await syncData(authUserId);
     } catch (error) {
       console.error('Error initializing Supabase:', error);
       setIsInitialized(false);
@@ -219,7 +159,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     lastSyncTime,
     syncData: () => syncData(),
     userId,
-    supabaseClient,
+    supabaseClient: supabase,
+    user,
   };
 
   return (
@@ -228,4 +169,3 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     </SupabaseContext.Provider>
   );
 }
-

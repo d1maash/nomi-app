@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { darkTheme } from '@/styles/theme';
 import { Card } from '@/components/ui/card';
 import { ProgressBar } from '@/components/ui/progress-bar';
@@ -19,10 +19,10 @@ export default function InsightsScreen() {
   const [suggestedChallenge, setSuggestedChallenge] = useState<Omit<Challenge, 'id' | 'progress' | 'streak' | 'completed'> | null>(null);
 
   // Загружаем данные из Supabase
-  const { transactions } = useTransactions();
-  const { budgets } = useBudgets();
-  const { goals } = useGoals();
-  const { challenges, add: addChallenge } = useChallenges();
+  const { transactions, isLoading: transactionsLoading, refresh: refreshTransactions } = useTransactions();
+  const { budgets, isLoading: budgetsLoading, refresh: refreshBudgets } = useBudgets();
+  const { goals, isLoading: goalsLoading, refresh: refreshGoals } = useGoals();
+  const { challenges, add: addChallenge, isLoading: challengesLoading, refresh: refreshChallenges } = useChallenges();
   const { insights, markAsRead: markInsightAsRead } = useInsights();
   const { isInitialized } = useSupabase();
 
@@ -46,8 +46,21 @@ export default function InsightsScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     triggerHaptic.light();
-    await loadInsights();
-    setRefreshing(false);
+    try {
+      // Сначала обновляем данные из Supabase
+      await Promise.all([
+        refreshTransactions(),
+        refreshBudgets(),
+        refreshGoals(),
+        refreshChallenges(),
+      ]);
+      // Затем регенерируем инсайты на основе свежих данных
+      await loadInsights();
+    } catch (error) {
+      console.error('Error refreshing insights:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleAcceptChallenge = async () => {
@@ -71,13 +84,42 @@ export default function InsightsScreen() {
   console.log('🔵 [Insights] Active challenges:', activeChallenges.length);
   console.log('🔵 [Insights] Completed challenges:', completedChallenges.length);
 
+  // Показываем индикатор загрузки только при первой загрузке
+  const isInitialLoading = (transactionsLoading || budgetsLoading || goalsLoading || challengesLoading) && 
+    transactions.length === 0 && budgets.length === 0 && goals.length === 0 && challenges.length === 0;
+
+  if (isInitialLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={darkTheme.colors.accent} />
+        <Text style={styles.loadingText}>Загрузка данных...</Text>
+      </View>
+    );
+  }
+
   if (transactions.length === 0) {
     return (
-      <EmptyState
-        iconName="clipboard"
-        title="Недостаточно данных"
-        message="Добавь несколько транзакций, чтобы получить AI-инсайты и рекомендации"
-      />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.emptyContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={darkTheme.colors.accent}
+            colors={[darkTheme.colors.accent]}
+            progressBackgroundColor={darkTheme.colors.surface}
+            title="Обновление..."
+            titleColor={darkTheme.colors.textSecondary}
+          />
+        }
+      >
+        <EmptyState
+          iconName="clipboard"
+          title="Недостаточно данных"
+          message="Добавь несколько транзакций, чтобы получить AI-инсайты и рекомендации"
+        />
+      </ScrollView>
     );
   }
 
@@ -86,7 +128,15 @@ export default function InsightsScreen() {
       style={styles.container}
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={darkTheme.colors.primary} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={darkTheme.colors.accent}
+          colors={[darkTheme.colors.accent]}
+          progressBackgroundColor={darkTheme.colors.surface}
+          title="Обновление..."
+          titleColor={darkTheme.colors.textSecondary}
+        />
       }
     >
       <Text style={styles.title}>AI-Инсайты</Text>
@@ -217,6 +267,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: darkTheme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: darkTheme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: darkTheme.spacing.md,
+  },
+  loadingText: {
+    ...darkTheme.typography.body,
+    color: darkTheme.colors.textSecondary,
+    marginTop: darkTheme.spacing.sm,
+  },
+  emptyContainer: {
+    flex: 1,
   },
   content: {
     padding: darkTheme.spacing.lg,

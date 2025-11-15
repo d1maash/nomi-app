@@ -6,16 +6,17 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { biometricService } from '@/services/biometric';
 import { triggerHaptic } from '@/utils/haptics';
-import { useAuth } from '@clerk/clerk-expo';
+import { useAuth } from '@/hooks/use-auth';
 import { MonoIcon } from '@/components/ui/mono-icon';
 import { useSettings } from '@/hooks/use-supabase';
 import { useSupabase } from '@/components/supabase-provider';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { signOut, isLoaded } = useAuth();
+  const { signOut, loading: authLoading } = useAuth();
   const { settings, update: updateSettings } = useSettings();
   const { isInitialized } = useSupabase();
+  const isLoaded = !authLoading;
 
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState('');
@@ -77,9 +78,9 @@ export default function SettingsScreen() {
 
   const performSignOut = async () => {
     try {
-      // Проверяем, загружается ли Clerk
+      // Проверяем, загружается ли аутентификация
       if (!isLoaded) {
-        Alert.alert('Подождите', 'Clerk ещё загружается. Попробуйте снова через несколько секунд.');
+        Alert.alert('Подождите', 'Аутентификация ещё загружается. Попробуйте снова через несколько секунд.');
         return;
       }
 
@@ -87,23 +88,22 @@ export default function SettingsScreen() {
       console.log('[Settings] signOut function exists:', !!signOut);
       console.log('[Settings] isLoaded:', isLoaded);
 
-      // Выполняем выход из Clerk
-      if (signOut) {
-        console.log('[Settings] Calling signOut()...');
-        await signOut();
-        console.log('[Settings] Sign out successful, redirecting to /auth...');
-        
-        // Явно перенаправляем на страницу входа после успешного выхода
-        // Используем небольшую задержку, чтобы Clerk успел обновить состояние
-        setTimeout(() => {
-          console.log('[Settings] Executing redirect to /auth');
-          router.replace('/auth');
-        }, 300);
-      } else {
-        // Если Clerk не настроен или signOut недоступен, перенаправляем напрямую
-        console.log('[Settings] signOut not available, redirecting to /auth directly');
-        router.replace('/auth');
+      // Выполняем выход из Supabase Auth
+      const { error } = await signOut();
+      
+      if (error) {
+        console.error('[Settings] Sign out error:', error);
+        Alert.alert('Ошибка', 'Не удалось выйти из аккаунта');
+        return;
       }
+      
+      console.log('[Settings] Sign out successful, redirecting to /auth...');
+      triggerHaptic.success();
+      
+      setTimeout(() => {
+        console.log('[Settings] Executing redirect to /auth');
+        router.replace('/auth');
+      }, 300);
     } catch (error) {
       console.error('[Settings] Sign out error:', error);
       Alert.alert('Ошибка', 'Не удалось выйти из аккаунта. Попробуйте ещё раз позже.');
@@ -149,7 +149,7 @@ export default function SettingsScreen() {
                 onValueChange={handleBiometricToggle}
                 trackColor={{
                   false: darkTheme.colors.surfaceLight,
-                  true: darkTheme.colors.primary,
+                  true: '#34C759',
                 }}
                 thumbColor="#FFFFFF"
               />
@@ -174,7 +174,7 @@ export default function SettingsScreen() {
               onValueChange={(v) => handleNotificationToggle('enabled', v)}
               trackColor={{
                 false: darkTheme.colors.surfaceLight,
-                true: darkTheme.colors.primary,
+                true: '#34C759',
               }}
               thumbColor="#FFFFFF"
             />
@@ -199,7 +199,7 @@ export default function SettingsScreen() {
                   onValueChange={(v) => handleNotificationToggle('monthlyBudget', v)}
                   trackColor={{
                     false: darkTheme.colors.surfaceLight,
-                    true: darkTheme.colors.primary,
+                    true: '#34C759',
                   }}
                   thumbColor="#FFFFFF"
                 />
@@ -219,7 +219,7 @@ export default function SettingsScreen() {
                   onValueChange={(v) => handleNotificationToggle('goalProgress', v)}
                   trackColor={{
                     false: darkTheme.colors.surfaceLight,
-                    true: darkTheme.colors.primary,
+                    true: '#34C759',
                   }}
                   thumbColor="#FFFFFF"
                 />
@@ -242,7 +242,7 @@ export default function SettingsScreen() {
                   }}
                   trackColor={{
                     false: darkTheme.colors.surfaceLight,
-                    true: darkTheme.colors.primary,
+                    true: '#34C759',
                   }}
                   thumbColor="#FFFFFF"
                 />
@@ -272,7 +272,7 @@ export default function SettingsScreen() {
               onValueChange={(v) => handlePrivacyToggle('aiCategorization', v)}
               trackColor={{
                 false: darkTheme.colors.surfaceLight,
-                true: darkTheme.colors.primary,
+                true: '#34C759',
               }}
               thumbColor="#FFFFFF"
             />
@@ -298,7 +298,7 @@ export default function SettingsScreen() {
               }}
               trackColor={{
                 false: darkTheme.colors.surfaceLight,
-                true: darkTheme.colors.primary,
+                true: '#34C759',
               }}
               thumbColor="#FFFFFF"
             />
